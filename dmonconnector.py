@@ -75,7 +75,9 @@ class Connector():
         try:
             res = self.esInstance.info()
         except Exception as inst:
+            logger.error('[%s] : [ERROR] Exception has occured with type %s at arguments %s', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
             return "An exception has occured with type %s at arguments %s" %(type(inst), inst.args)
+            sys.exit(2)
         return res
 
     def pushAnomaly(self):
@@ -94,10 +96,6 @@ class Connector():
         res = self.esInstance.search(index=myIndex, body=queryBody)
         return res
 
-
-class QueryConstructyor():
-    def __init__(self):
-        print 'something'
 
 if __name__ == '__main__':
     testConnector = Connector('85.120.206.27')

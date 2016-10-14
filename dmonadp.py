@@ -18,8 +18,11 @@ limitations under the License.
 
 import sys, getopt
 import os.path
-from  dmonconnector import Connector
+from dmonconnector import Connector
 from adpconfig import readConf
+from adplogger import logger
+import datetime
+import time
 
 
 def main(argv):
@@ -33,8 +36,9 @@ def main(argv):
         "detect": None
     }
     try:
-        opts, args = getopt.getopt(argv, "he:tf:m:vx:d:",["endpoint=", "file=", "method=", "export=", "detect="])
+        opts, args = getopt.getopt(argv, "he:tf:m:vx:d:", ["endpoint=", "file=", "method=", "export=", "detect="])
     except getopt.GetoptError:
+        logger.warning('[%s] : [WARN] Invalid argument received exiting', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
         print "dmonadp.py -f <filelocation>, -t -m <method> -v -x <modelname>"
         sys.exit(2)
     for opt, arg in opts:
@@ -74,8 +78,10 @@ def main(argv):
             print readCnf
     else:
         if os.path.isfile(settings["file"]):
-            print "found file"
+            print "Found config file found !"
+            logger.info('[%s] : [INFO] Config file found', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
         else:
+            logger.warning('[%s] : [WARN] Config file not found', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
             print "Config File not found !"
 
 

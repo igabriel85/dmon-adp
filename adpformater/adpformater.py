@@ -1,5 +1,37 @@
 import pandas as pd
 
+
+class DataFormatter():
+    def __init__(self, dataloc):
+        self.dataloc = dataloc
+
+    def aggJsonToCsv(self):
+        return "CSV file"
+
+    def expTimestamp(self):
+        return "Expand metric timestamp"
+
+    def window(self):
+        return "Window metrics"
+
+    def pivot(self):
+        return "Pivot values"
+
+    def addID(self):
+        return "Add new ID as index"
+
+    def removeID(self):
+        return "Remove selected column as index"
+
+    def renameHeader(self):
+        return "Rename headers"
+
+    def normalize(self):
+        return "Normalize data"
+
+    def denormalize(self):
+        return "Denormalize data"
+
 input_table = pd.read_csv("metrics.csv")
 
 
