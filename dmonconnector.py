@@ -25,6 +25,7 @@ import os
 import sys, getopt
 from adplogger import logger
 import time
+from dataformatter import DataFormatter
 
 dataDir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 
@@ -186,11 +187,6 @@ if __name__ == '__main__':
             "field": "AllocatedContainers"
           }
         },
-        "49": {
-          "avg": {
-            "field": "AvailableGB"
-          }
-        },
         "50": {
           "avg": {
             "field": "AllocatedVCores"
@@ -335,50 +331,58 @@ query2 = {
 response = testConnector.aggQuery(query)
 # logger.info('This is a test')
 response2 = testConnector.aggQuery(query2)
+dformat = DataFormatter(dataDir)
+
+dformat.dict2csv(response, query, 'test2.csv')
+dformat.dict2csv(response2, query2, 'test22.csv')
+
+dformat.dict2arff('test2.csv', 'test2.arff')
+
+
 
 #print type(response['aggregations'])
 #print len(response)
 #print response2
 #print len(response2)
 
-requiredMetrics = []
-for key, value in response['aggregations'].iteritems():
-    for k, v in value.iteritems():
-        for r in v:
-            dictMetrics = {}
-            for rKey, rValue in r.iteritems():
-                if rKey == 'doc_count' or rKey == 'key_as_string':
-                    pass
-                elif rKey == 'key':
-                   # print "%s -> %s"% (rKey, rValue)
-                    dictMetrics['key'] = rValue
-                else:
-                   # print "%s -> %s"% (rKey, rValue['value'])
-                    dictMetrics[rKey] = rValue['value']
-            requiredMetrics.append(dictMetrics)
-
-print requiredMetrics
-cheaders = []
-kvImp = {}
-for qKey, qValue in query['aggs'].iteritems():
-    #print qValue['aggs']
-    for v, t in qValue['aggs'].iteritems():
-        #print v
-        #print t['avg']['field']
-        kvImp[v] = t['avg']['field']
-        cheaders.append(v)
-
-cheaders.append('key')
-filename = 'test.csv'
-csvOut = os.path.join(dataDir, filename)
-try:
-    with open(csvOut, 'wb') as csvfile:
-        w = csv.DictWriter(csvfile, cheaders)
-        w.writeheader()
-        for metrics in requiredMetrics:
-            w.writerow(metrics)
-    csvfile.close()
-except EnvironmentError:
-    logger.error('[%s] : [ERROR] File %s could not be created', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), csvOut)
-    sys.exit(1)
+# requiredMetrics = []
+# for key, value in response['aggregations'].iteritems():
+#     for k, v in value.iteritems():
+#         for r in v:
+#             dictMetrics = {}
+#             for rKey, rValue in r.iteritems():
+#                 if rKey == 'doc_count' or rKey == 'key_as_string':
+#                     pass
+#                 elif rKey == 'key':
+#                    # print "%s -> %s"% (rKey, rValue)
+#                     dictMetrics['key'] = rValue
+#                 else:
+#                    # print "%s -> %s"% (rKey, rValue['value'])
+#                     dictMetrics[rKey] = rValue['value']
+#             requiredMetrics.append(dictMetrics)
+#
+# print requiredMetrics
+# cheaders = []
+# kvImp = {}
+# for qKey, qValue in query['aggs'].iteritems():
+#     #print qValue['aggs']
+#     for v, t in qValue['aggs'].iteritems():
+#         #print v
+#         #print t['avg']['field']
+#         kvImp[v] = t['avg']['field']
+#         cheaders.append(v)
+#
+# cheaders.append('key')
+# filename = 'test.csv'
+# csvOut = os.path.join(dataDir, filename)
+# try:
+#     with open(csvOut, 'wb') as csvfile:
+#         w = csv.DictWriter(csvfile, cheaders)
+#         w.writeheader()
+#         for metrics in requiredMetrics:
+#             w.writerow(metrics)
+#     csvfile.close()
+# except EnvironmentError:
+#     logger.error('[%s] : [ERROR] File %s could not be created', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), csvOut)
+#     sys.exit(1)
 

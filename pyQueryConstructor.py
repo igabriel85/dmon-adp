@@ -30,7 +30,6 @@ class QueryConstructor():
         cquery.aggs["3"].aggs["43"].avg.field = "ContainersKilled"
         cquery.aggs["3"].aggs["44"].avg.field = "ContainersIniting"
         cquery.aggs["3"].aggs["45"].avg.field = "ContainersRunning"
-        cquery.aggs["3"].aggs["46"].avg.field = "AllocatedGB"
         cquery.aggs["3"].aggs["47"].avg.field = "AvailableGB"
         cquery.aggs["3"].aggs["48"].avg.field = "AllocatedContainers"
         cquery.aggs["3"].aggs["49"].avg.field = "AvailableGB"
@@ -137,11 +136,6 @@ if __name__ == "__main__":
                     "45": {
                         "avg": {
                             "field": "ContainersRunning"
-                        }
-                    },
-                    "46": {
-                        "avg": {
-                            "field": "AllocatedGB"
                         }
                     },
                     "47": {
