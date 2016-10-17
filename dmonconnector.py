@@ -29,6 +29,7 @@ from dataformatter import DataFormatter
 
 dataDir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 
+
 class Connector():
     def __init__(self, esEndpoint):
         self.esInstance = Elasticsearch(esEndpoint)
@@ -96,6 +97,9 @@ class Connector():
     def aggQuery(self, queryBody, myIndex="logstash-*"):
         res = self.esInstance.search(index=myIndex, body=queryBody)
         return res
+
+    def getNodeList(self):
+      return "print get list form DMON"
 
 
 if __name__ == '__main__':

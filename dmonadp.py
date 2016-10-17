@@ -87,7 +87,6 @@ def main(argv):
 
     #if settings["esendpoint"] == None:
 
-
     dmonC = Connector('85.120.206.27')
 
     print dmonC
