@@ -1,14 +1,10 @@
 arff==0.9
-cm-api==10.0.0
-collectd==1.0
 cryptography==1.2.3
 cssselect==0.9.1
 debtcollector==1.3.0
 decorator==4.0.4
 elasticsearch==2.2.0
 enum34==1.1.2
-euca2ools==3.2.1
-Fabric==1.11.1
 Flask==0.10.1
 Flask-Bootstrap==3.1.1.2
 Flask-HTTPAuth==3.1.1
@@ -33,8 +29,6 @@ futures==3.0.5
 gevent==1.0.1
 greenlet==0.4.9
 gunicorn==19.3.0
-haproxyctl==0.3.1
-html5lib==0.999
 idna==2.0
 influxdb==0.1.12
 ipaddress==1.0.16
@@ -48,7 +42,6 @@ jsonpatch==1.13
 jsonpointer==1.10
 jsonschema==2.5.1
 keystoneauth1==2.3.0
-locustio==0.7.4
 lxml==3.4.2
 Mako==1.0.0
 MarkupSafe==0.23
@@ -60,7 +53,6 @@ netifaces==0.10.4
 networkx==1.10
 numpy==1.11.0
 openopt==0.5308
-openstacksdk==0.8.1
 os-client-config==1.16.0
 oslo.config==1.9.3
 oslo.context==2.2.0
@@ -78,10 +70,8 @@ prettytable==0.7.2
 protobuf==3.0.0b2
 psutil==4.0.0
 pyasn1==0.1.9
-PyBrain==0.3.1
 pycparser==2.14
 pycrypto==2.6.1
-pygame==1.9.2a0
 pyOpenSSL==0.14
 pyparsing==2.0.3
 pyserial==2.7
@@ -90,10 +80,7 @@ python-dateutil==2.5.0
 python-glanceclient==2.0.0
 python-heatclient==1.0.0
 python-keystoneclient==1.3.4
-python-logstash==0.4.6
 python-mimeparse==0.1.4
-python-nmap==0.4.0
-python-novaclient==3.3.0
 python-openid==2.2.5
 python-openstackclient==2.2.0
 python-saharaclient==0.13.0
@@ -110,12 +97,10 @@ requests==2.10.0
 requestsexceptions==1.1.3
 scikit-learn==0.16.1
 scipy==0.14.0rc2
-Scrapy==0.24.5
 setproctitle==1.1.8
 simplejson==3.8.2
 six==1.10.0
 SpaceFuncs==0.52
-SPADE==2.2.1
 SPARQLWrapper==1.6.4
 SQLAlchemy==0.9.6
 stevedore==1.12.0
@@ -133,5 +118,4 @@ Werkzeug==0.11.10
 Whoosh==2.6.0
 wrapt==1.10.6
 WTForms==1.0.5
-youtube-dl==2014.4.30.1
 zope.interface==4.1.2
