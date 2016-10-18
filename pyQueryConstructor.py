@@ -6,6 +6,42 @@ class QueryConstructor():
         self.author = 'Constructor for dmon-adp ES connector querys'
         # self.systemLoadString = "collectd_type:\"load\" AND host:\"dice.cdh.master\""
 
+    def loadString(self, host):
+        qstring = "collectd_type:\"load\" AND host:\"%s\"" % host
+        return qstring
+
+    def memoryString(self, host):
+        qstring = "collectd_type:\"memory\" AND host:\"%s\"" % host
+        return qstring
+
+    def interfaceString(self, host):
+        qstring = "plugin:\"interface\" AND collectd_type:\"if_octets\" AND host:\"%s\"" % host
+        return qstring
+
+    def packetString(self, host):
+        qstring = "plugin:\"interface\" AND collectd_type:\"if_packets\" AND host:\"%s\"" % host
+        return qstring
+
+    def dfsString(self):
+        qstring = "serviceType:\"dfs\""
+        return qstring
+
+    def dfsFString(self):
+        qstring = "serviceType:\"dfs\" AND serviceMetrics:\"FSNamesystem\""
+        return qstring
+
+    def jvmnodeManagerString(self, host):
+        qstring = "serviceType:\"jvm\" AND ProcessName:\"NodeManager\" AND hostname:\"%s\"" % host
+        return qstring
+
+    def jvmNameNodeString(self):
+        qstring = "serviceType:\"jvm\" AND ProcessName:\"NameNode\""
+        return qstring
+
+    def nodeManagerString(self, host):
+        qstring = "serviceType:\"yarn\" AND serviceMetrics:\"NodeManagerMetrics\" AND hostname:\"%s\"" % host
+        return qstring
+
     def yarnNodeManager(self, qstring, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
                             qmin_doc_count=1):
 
