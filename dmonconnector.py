@@ -26,13 +26,16 @@ import sys, getopt
 from adplogger import logger
 import time
 from dataformatter import DataFormatter
+from pyQueryConstructor import QueryConstructor
 
 dataDir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 
 
 class Connector():
-    def __init__(self, esEndpoint):
+    def __init__(self, esEndpoint, dmonPort=5001):
         self.esInstance = Elasticsearch(esEndpoint)
+        self.esEndpoint = esEndpoint
+        self.dmonPort = dmonPort
 
     def query(self, queryBody, allm=True, dMetrics=[], debug=False, myIndex="logstash-*"):
         res = self.esInstance.search(index=myIndex, body=queryBody)
@@ -77,7 +80,7 @@ class Connector():
         try:
             res = self.esInstance.info()
         except Exception as inst:
-            logger.error('[%s] : [ERROR] Exception has occured with type %s at arguments %s', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+            logger.error('[%s] : [ERROR] Exception has occured while connecting to ES dmon with type %s at arguments %s', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
             return "An exception has occured with type %s at arguments %s" %(type(inst), inst.args)
             sys.exit(2)
         return res
@@ -95,298 +98,101 @@ class Connector():
         return "use local data"
 
     def aggQuery(self, queryBody, myIndex="logstash-*"):
-        res = self.esInstance.search(index=myIndex, body=queryBody)
+        try:
+            res = self.esInstance.search(index=myIndex, body=queryBody)
+        except Exception as inst:
+            logger.error('[%s] : [ERROR] Exception while executing ES query with %s and %s', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+            sys.exit(2)
         return res
 
     def getNodeList(self):
-      return "print get list form DMON"
+        '''
+        :return: -> returns the list of registered nodes from dmon
+        '''
+        nUrl = "http://%s:%s/dmon/v1/observer/nodes" % (self.esEndpoint, self.dmonPort)
+        logger.info('[%s] : [INFO] dmon get node url -> %s', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), nUrl)
+        try:
+           rdmonNode = requests.get(nUrl)
+        except Exception as inst:
+           logger.error('[%s] : [ERROR] Exception has occured while connecting to dmon with type %s at arguments %s', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+           print "Can't connect to dmon at %s port %s" % (self.esEndpoint, self.dmonPort)
+           sys.exit(2)
+        rdata = rdmonNode.json()
+        nodes = []
+        for e in rdata['Nodes']:
+          for k in e:
+            nodes.append(k)
+        return nodes
 
 
 if __name__ == '__main__':
-    testConnector = Connector('85.120.206.27')
+
+    #Standard query values
+
+    qgte = 1475842980000
+    qlte = 1475845200000
+    qsize = 0
+    qinterval = "1s"
+
+
+
+    dmonConnector = Connector('85.120.206.27')
+    qConstructor = QueryConstructor()
+    dformat = DataFormatter(dataDir)
+
+    nodeList = dmonConnector.getNodeList()
+    print nodeList
+
+    # Get system Metrics
+    for node in nodeList:
+        test = {}
+        load, load_file = qConstructor.loadString(node)
+        memory, memory_file = qConstructor.memoryString(node)
+        interface, interface_file = qConstructor.interfaceString(node)
+        packet, packet_file = qConstructor.packetString(node)
+
+        qload = qConstructor.systemLoadQuery(load, qgte, qlte, qsize, qinterval)
+        qmemory = qConstructor.systemMemoryQuery(memory, qgte, qlte, qsize, qinterval)
+        qinterface = qConstructor.systemInterfaceQuery(interface, qgte, qlte, qsize, qinterval)
+        qpacket = qConstructor.systemInterfaceQuery(packet, qgte, qlte, qsize, qinterval)
+
+        # Execute query and convert response to csv
+        qloadResponse = dmonConnector.aggQuery(qload)
+        dformat.dict2csv(qloadResponse, qload, load_file)
+
+        gmemoryResponse = dmonConnector.aggQuery(qmemory)
+        #print gmemoryResponse
+        dformat.dict2csv(gmemoryResponse, qmemory, memory_file)
+
+        ginterfaceResponse = dmonConnector.aggQuery(qinterface)
+        dformat.dict2csv(ginterfaceResponse, qinterface, interface_file)
+
+        gpacketResponse = dmonConnector.aggQuery(qpacket)
+        dformat.dict2csv(gpacketResponse, qpacket, packet_file)
+
+
+
+
     #print testConnector.info()
-    query = {
-  "query": {
-    "filtered": {
-      "query": {
-        "query_string": {
-          "query": "serviceType:\"yarn\" AND hostname:\"dice.cdh.slave1\"",
-          "analyze_wildcard": True
-        }
-      },
-      "filter": {
-        "bool": {
-          "must": [
-            {
-              "range": {
-                "@timestamp": {
-                  "gte": 1475842980000,
-                  "lte": 1475845200000,
-                  "format": "epoch_millis"
-                }
-              }
-            }
-          ],
-          "must_not": []
-        }
-      }
-    }
-  },
-  "size": 0,
-  "aggs": {
-    "3": {
-      "date_histogram": {
-        "field": "@timestamp",
-        "interval": "1s",
-        "time_zone": "Europe/Helsinki",
-        "min_doc_count": 1,
-        "extended_bounds": {
-          "min": 1475842980000,
-          "max": 1475845200000
-        }
-      },
-      "aggs": {
-        "40": {
-          "avg": {
-            "field": "ContainersLaunched"
-          }
-        },
-        "41": {
-          "avg": {
-            "field": "ContainersCompleted"
-          }
-        },
-        "42": {
-          "avg": {
-            "field": "ContainersFailed"
-          }
-        },
-        "43": {
-          "avg": {
-            "field": "ContainersKilled"
-          }
-        },
-        "44": {
-          "avg": {
-            "field": "ContainersIniting"
-          }
-        },
-        "45": {
-          "avg": {
-            "field": "ContainersRunning"
-          }
-        },
-        "46": {
-          "avg": {
-            "field": "AllocatedGB"
-          }
-        },
-        "47": {
-          "avg": {
-            "field": "AvailableGB"
-          }
-        },
-        "48": {
-          "avg": {
-            "field": "AllocatedContainers"
-          }
-        },
-        "50": {
-          "avg": {
-            "field": "AllocatedVCores"
-          }
-        },
-        "51": {
-          "avg": {
-            "field": "AvailableVCores"
-          }
-        },
-        "52": {
-          "avg": {
-            "field": "ContainerLaunchDurationNumOps"
-          }
-        },
-        "53": {
-          "avg": {
-            "field": "ContainerLaunchDurationAvgTime"
-          }
-        }
-      }
-    }
-  }
-}
+    #response = testConnector.aggQuery(query)
+    # logger.info('This is a test')
+    #response2 = testConnector.aggQuery(query2)
+    # dformat = DataFormatter(dataDir)
+    #
+    # dformat.dict2csv(response, query, 'test2.csv')
+    # dformat.dict2csv(response2, query2, 'test22.csv')
+    #
+    # dformat.dict2arff('test2.csv', 'test2.arff')
 
-query2 = {
-  "query": {
-    "filtered": {
-      "query": {
-        "query_string": {
-          "query": "serviceType:\"yarn\" AND hostname:\"dice.cdh.slave1\"",
-          "analyze_wildcard": True
-        }
-      },
-      "filter": {
-        "bool": {
-          "must": [
-            {
-              "range": {
-                "@timestamp": {
-                  "gte": 1475842980000,
-                  "lte": 1475845200000,
-                  "format": "epoch_millis"
-                }
-              }
-            }
-          ],
-          "must_not": []
-        }
-      }
-    }
-  },
-  "size": 0,
-  "aggs": {
-    "3": {
-      "date_histogram": {
-        "field": "@timestamp",
-        "interval": "10s",
-        "time_zone": "Europe/Helsinki",
-        "min_doc_count": 1,
-        "extended_bounds": {
-          "min": 1475842980000,
-          "max": 1475845200000
-        }
-      },
-      "aggs": {
-        "40": {
-          "avg": {
-            "field": "ContainersLaunched"
-          }
-        },
-        "41": {
-          "avg": {
-            "field": "ContainersCompleted"
-          }
-        },
-        "42": {
-          "avg": {
-            "field": "ContainersFailed"
-          }
-        },
-        "43": {
-          "avg": {
-            "field": "ContainersKilled"
-          }
-        },
-        "44": {
-          "avg": {
-            "field": "ContainersIniting"
-          }
-        },
-        "45": {
-          "avg": {
-            "field": "ContainersRunning"
-          }
-        },
-        "46": {
-          "avg": {
-            "field": "AllocatedGB"
-          }
-        },
-        "47": {
-          "avg": {
-            "field": "AvailableGB"
-          }
-        },
-        "48": {
-          "avg": {
-            "field": "AllocatedContainers"
-          }
-        },
-        "49": {
-          "avg": {
-            "field": "AvailableGB"
-          }
-        },
-        "50": {
-          "avg": {
-            "field": "AllocatedVCores"
-          }
-        },
-        "51": {
-          "avg": {
-            "field": "AvailableVCores"
-          }
-        },
-        "52": {
-          "avg": {
-            "field": "ContainerLaunchDurationNumOps"
-          }
-        },
-        "53": {
-          "avg": {
-            "field": "ContainerLaunchDurationAvgTime"
-          }
-        }
-      }
-    }
-  }
-}
-
-response = testConnector.aggQuery(query)
-# logger.info('This is a test')
-response2 = testConnector.aggQuery(query2)
-dformat = DataFormatter(dataDir)
-
-dformat.dict2csv(response, query, 'test2.csv')
-dformat.dict2csv(response2, query2, 'test22.csv')
-
-dformat.dict2arff('test2.csv', 'test2.arff')
+    #responseSystem = testConnector.aggQuery(systemRequest)
+    #print responseSystem
 
 
 
-#print type(response['aggregations'])
-#print len(response)
-#print response2
-#print len(response2)
+    #print type(response['aggregations'])
+    #print len(response)
+    #print response2
+    #print len(response2)
 
-# requiredMetrics = []
-# for key, value in response['aggregations'].iteritems():
-#     for k, v in value.iteritems():
-#         for r in v:
-#             dictMetrics = {}
-#             for rKey, rValue in r.iteritems():
-#                 if rKey == 'doc_count' or rKey == 'key_as_string':
-#                     pass
-#                 elif rKey == 'key':
-#                    # print "%s -> %s"% (rKey, rValue)
-#                     dictMetrics['key'] = rValue
-#                 else:
-#                    # print "%s -> %s"% (rKey, rValue['value'])
-#                     dictMetrics[rKey] = rValue['value']
-#             requiredMetrics.append(dictMetrics)
-#
-# print requiredMetrics
-# cheaders = []
-# kvImp = {}
-# for qKey, qValue in query['aggs'].iteritems():
-#     #print qValue['aggs']
-#     for v, t in qValue['aggs'].iteritems():
-#         #print v
-#         #print t['avg']['field']
-#         kvImp[v] = t['avg']['field']
-#         cheaders.append(v)
-#
-# cheaders.append('key')
-# filename = 'test.csv'
-# csvOut = os.path.join(dataDir, filename)
-# try:
-#     with open(csvOut, 'wb') as csvfile:
-#         w = csv.DictWriter(csvfile, cheaders)
-#         w.writeheader()
-#         for metrics in requiredMetrics:
-#             w.writerow(metrics)
-#     csvfile.close()
-# except EnvironmentError:
-#     logger.error('[%s] : [ERROR] File %s could not be created', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), csvOut)
-#     sys.exit(1)
+
 
