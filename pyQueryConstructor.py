@@ -8,39 +8,48 @@ class QueryConstructor():
 
     def loadString(self, host):
         qstring = "collectd_type:\"load\" AND host:\"%s\"" % host
-        return qstring
+        file = "Load_%s.csv" % host
+        return qstring, file
 
     def memoryString(self, host):
         qstring = "collectd_type:\"memory\" AND host:\"%s\"" % host
-        return qstring
+        file = "Memory_%s.csv" % host
+        return qstring, file
 
     def interfaceString(self, host):
         qstring = "plugin:\"interface\" AND collectd_type:\"if_octets\" AND host:\"%s\"" % host
-        return qstring
+        file = "Interface_%s.csv" % host
+        return qstring, file
 
     def packetString(self, host):
         qstring = "plugin:\"interface\" AND collectd_type:\"if_packets\" AND host:\"%s\"" % host
-        return qstring
+        file = "Packets_%s.csv" % host
+        return qstring, file
 
     def dfsString(self):
         qstring = "serviceType:\"dfs\""
-        return qstring
+        file = "DFS.csv"
+        return qstring, file
 
     def dfsFString(self):
         qstring = "serviceType:\"dfs\" AND serviceMetrics:\"FSNamesystem\""
-        return qstring
+        file = "DFSFS.csv"
+        return qstring, file
 
     def jvmnodeManagerString(self, host):
         qstring = "serviceType:\"jvm\" AND ProcessName:\"NodeManager\" AND hostname:\"%s\"" % host
-        return qstring
+        file = "JVM_NM_%s.csv" % host
+        return qstring, file
 
     def jvmNameNodeString(self):
         qstring = "serviceType:\"jvm\" AND ProcessName:\"NameNode\""
-        return qstring
+        file = "JVM_NN.csv"
+        return qstring, file
 
     def nodeManagerString(self, host):
         qstring = "serviceType:\"yarn\" AND serviceMetrics:\"NodeManagerMetrics\" AND hostname:\"%s\"" % host
-        return qstring
+        file = "NM_%s.csv" % host
+        return qstring, file
 
     def yarnNodeManager(self, qstring, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
                             qmin_doc_count=1):
