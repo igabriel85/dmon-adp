@@ -48,10 +48,13 @@ class DataFormatter():
         requiredMetrics = []
         logger.info('[%s] : [INFO] Started response to csv conversion',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        # print "This is the query _------------_-> %s" %query
+        # print "This is the response _------------_-> %s" %response
         for key, value in response['aggregations'].iteritems():
             for k, v in value.iteritems():
                 for r in v:
                     dictMetrics = {}
+                    # print "This is the dictionary ---------> %s " % str(r)
                     for rKey, rValue in r.iteritems():
                         if rKey == 'doc_count' or rKey == 'key_as_string':
                             pass
@@ -60,33 +63,48 @@ class DataFormatter():
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), rKey, rValue)
                             # print "%s -> %s"% (rKey, rValue)
                             dictMetrics['key'] = rValue
+                        elif query['aggs'].values()[0].values()[1].values()[0].values()[0].values()[0] =='type_instance.raw':
+                            logger.debug('[%s] : [DEBUG] Detected Memory type aggregation', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+                            # print "This is  rValue ________________> %s" % str(rValue)
+                            # print "Keys of rValue ________________> %s" % str(rValue.keys())
+                            for val in rValue['buckets']:
+                                dictMetrics[val['key']] = val['1']['value']
                         else:
-                            # print "%s -> %s"% (rKey, rValue['value'])
+                            # print "Values -> %s" % rValue
+                            # print "rKey -> %s" % rKey
+                            # print "This is the rValue ___________> %s " % str(rValue)
                             logger.debug('[%s] : [DEBUG] Request has keys %s and flattened values %s',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), rKey, rValue['value'])
                             dictMetrics[rKey] = rValue['value']
                     requiredMetrics.append(dictMetrics)
+        # print "Required Metrics -> %s" % requiredMetrics
 
+        csvOut = os.path.join(self.dataDir, filename)
         cheaders = []
-        kvImp = {}
-        for qKey, qValue in query['aggs'].iteritems():
-            logger.info('[%s] : [INFO] Value aggs from query %s',
-                                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), qValue['aggs'])
-            for v, t in qValue['aggs'].iteritems():
-                kvImp[v] = t['avg']['field']
-                cheaders.append(v)
+        if query['aggs'].values()[0].values()[1].values()[0].values()[0].values()[0] == "type_instance.raw":
+            logger.debug('[%s] : [DEBUG] Detected Memory type query', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+            cheaders = requiredMetrics[0].keys()
+        else:
+            kvImp = {}
 
-        cheaders.append('key')
-        for key, value in kvImp.iteritems():
-            cheaders[cheaders.index(key)] = value
-        for e in requiredMetrics:
-            for krep, vrep in kvImp.iteritems():
-                e[vrep] = e.pop(krep)
+            for qKey, qValue in query['aggs'].iteritems():
+                logger.info('[%s] : [INFO] Value aggs from query %s',
+                                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), qValue['aggs'])
+                for v, t in qValue['aggs'].iteritems():
+                    kvImp[v] = t['avg']['field']
+                    cheaders.append(v)
+
+            cheaders.append('key')
+            for key, value in kvImp.iteritems():
+                cheaders[cheaders.index(key)] = value
+            for e in requiredMetrics:
+                for krep, vrep in kvImp.iteritems():
+                    e[vrep] = e.pop(krep)
+            logger.info('[%s] : [INFO] Dict translator %s',
+                                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(kvImp))
         logger.info('[%s] : [INFO] Headers detected %s',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(cheaders))
-        logger.info('[%s] : [INFO] Dict translator %s',
-                                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(kvImp))
-        csvOut = os.path.join(self.dataDir, filename)
+
         try:
             with open(csvOut, 'wb') as csvfile:
                 w = csv.DictWriter(csvfile, cheaders)
@@ -115,3 +133,5 @@ class DataFormatter():
 
     def normalize(self):
         return "normalized dataset"
+
+
