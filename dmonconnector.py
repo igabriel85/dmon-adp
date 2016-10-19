@@ -143,18 +143,24 @@ if __name__ == '__main__':
     nodeList = dmonConnector.getNodeList()
     print nodeList
 
-    # Get system Metrics
+    # Get host based metrics
     for node in nodeList:
-        test = {}
         load, load_file = qConstructor.loadString(node)
         memory, memory_file = qConstructor.memoryString(node)
         interface, interface_file = qConstructor.interfaceString(node)
         packet, packet_file = qConstructor.packetString(node)
+        nodeManager, nodeManager_file = qConstructor.nodeManagerString(node)
+        jvmNodeManager, jvmNodeManager_file = qConstructor.jvmnodeManagerString(node)
+
+
 
         qload = qConstructor.systemLoadQuery(load, qgte, qlte, qsize, qinterval)
         qmemory = qConstructor.systemMemoryQuery(memory, qgte, qlte, qsize, qinterval)
         qinterface = qConstructor.systemInterfaceQuery(interface, qgte, qlte, qsize, qinterval)
         qpacket = qConstructor.systemInterfaceQuery(packet, qgte, qlte, qsize, qinterval)
+        qnodeManager = qConstructor.yarnNodeManager(nodeManager, qgte, qlte, qsize, qinterval)
+        qjvmNodeManager = qConstructor.jvmNNquery(jvmNodeManager, qgte, qlte, qsize, qinterval)
+
 
         # Execute query and convert response to csv
         qloadResponse = dmonConnector.aggQuery(qload)
@@ -169,6 +175,36 @@ if __name__ == '__main__':
 
         gpacketResponse = dmonConnector.aggQuery(qpacket)
         dformat.dict2csv(gpacketResponse, qpacket, packet_file)
+
+        gnodeManagerResponse = dmonConnector.aggQuery(qnodeManager)
+        dformat.dict2csv(gnodeManagerResponse, qnodeManager, nodeManager_file)
+
+        gjvmNodeManagerResponse = dmonConnector.aggQuery(qjvmNodeManager)
+        if gjvmNodeManagerResponse['aggregations'].values()[0].values()[0]:
+            dformat.dict2csv(gjvmNodeManagerResponse, qjvmNodeManager, jvmNodeManager_file)
+        else:
+            logger.info('[%s] : [INFO] Empty response from  %s no Node Manager detected!', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), node)
+
+
+    # Get non host based metrics
+    dfs, dfs_file = qConstructor.dfsFString()
+    dfsFs, dfsFs_file = qConstructor.dfsFString()
+    jvmNameNodeString, jvmNameNode_file = qConstructor.jvmNameNodeString()
+
+    qdfs = qConstructor.dfsQuery(dfs, qgte, qlte, qsize, qinterval)
+    qdfsFs = qConstructor.dfsFSQuery(dfsFs, qgte, qlte, qsize, qinterval)
+    qjvmNameNode = qConstructor.jvmNNquery(jvmNameNodeString, qgte, qlte, qsize, qinterval)
+
+    gdfs = dmonConnector.aggQuery(qdfs)
+    dformat.dict2csv(gdfs, qdfs, dfs_file)
+
+    gdfsFs = dmonConnector.aggQuery(qdfsFs)
+    dformat.dict2csv(gdfsFs, qdfsFs, dfsFs_file)
+
+    gjvmNameNode = dmonConnector.aggQuery(qjvmNameNode)
+    dformat.dict2csv(gjvmNameNode, qjvmNameNode, jvmNameNode_file)
+
+
 
 
 
