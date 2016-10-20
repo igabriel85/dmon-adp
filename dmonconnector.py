@@ -130,11 +130,12 @@ class Connector():
 if __name__ == '__main__':
 
     #Standard query values
-
+    # qte = 1475842980000
+    # qlte = 1475845200000
     qgte = 1475842980000
     qlte = 1475845200000
     qsize = 0
-    qinterval = "1s"
+    qinterval = "10s"
 
 
 
