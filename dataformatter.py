@@ -21,6 +21,8 @@ import os
 from datetime import datetime
 import time
 import sys
+import pandas as pd
+import glob
 from util import convertCsvtoArff
 import weka.core.jvm as jvm
 
@@ -37,6 +39,64 @@ class DataFormatter():
 
     def filter(self):
         return 'filter dataset'
+
+    def merge(self, csvOne, csvTwo, merged):
+        fone = pd.read_csv(csvOne)
+        ftwo = pd.read_csv(csvTwo)
+        mergedCsv = fone.merge(ftwo, on='key')
+        mergedCsv.to_csv(merged, index=False)
+        logger.info('[%s] : [INFO] Merged %s and %s into %s',
+                                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'),
+                    str(csvOne), str(csvTwo), str(merged))
+
+    def merge2(self, csvOne, csvTwo, merged):
+        fone = pd.read_csv(csvOne)
+        ftwo = pd.read_csv(csvTwo)
+        mergedCsv = pd.concat([fone, ftwo], axis=1, keys='key')
+        mergedCsv.to_csv(merged, index=False)
+        return "Merge second version"
+
+    def mergeall(self, datadir, merged):
+        all_files = glob.glob(os.path.join(datadir, "*.csv"))
+
+        df_from_each_file = (pd.read_csv(f) for f in all_files)
+        concatDF = pd.concat(df_from_each_file, ignore_index=True)
+        concatDF.to_csv(merged)
+
+    def chainMerge(self, lFiles, mergedFile, colNames, iterStart=1):
+        '''
+        :param lFiles: -> list of files to be opened
+        :param mergedFile: -> name of merged file
+        :param colNames: -> dict with master column names
+        :param iterStart: -> start of iteration default is 1
+        :return:
+        '''
+
+        #Parsing colNames
+        slaveCol = {}
+        for k, v in colNames.iteritems():
+            slaveCol[k] = '_'.join([v.split('_')[0], 'slave'])
+
+        dfList = []
+        for f in lFiles:
+            df = pd.read_csv(f)
+            dfList.append(df)
+
+        # Get first df and set as master
+        current = dfList[0].rename(columns=colNames)
+        for i, frame in enumerate(dfList[1:], iterStart):
+            iterSlave ={}
+            for k, v in slaveCol.iteritems():
+                iterSlave[k] = v+str(i)
+            current = current.merge(frame).rename(columns=iterSlave)
+        current.to_csv(mergedFile)
+
+    def chainMergeSystem(self):
+        allIterface = glob.glob(os.path.join(self.dataDir, "Interface_*.csv"))
+        mergedInterface = os.path.join(self.dataDir, "Interface.csv")
+        colNames = {'rx': 'rx_master', 'tx': 'tx_master'}
+        self.chainMerge(allIterface, mergedInterface, colNames)
+
 
     def dict2csv(self, response, query, filename):
         '''
