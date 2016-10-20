@@ -32,13 +32,15 @@ dataDir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 
 
 class Connector():
-    def __init__(self, esEndpoint, dmonPort=5001):
+    def __init__(self, esEndpoint, dmonPort=5001, esInstanceEndpoint=9200, index="logstash-*"):
         self.esInstance = Elasticsearch(esEndpoint)
         self.esEndpoint = esEndpoint
         self.dmonPort = dmonPort
+        self.esInstanceEndpoint = esInstanceEndpoint
+        self.myIndex = index
 
-    def query(self, queryBody, allm=True, dMetrics=[], debug=False, myIndex="logstash-*"):
-        res = self.esInstance.search(index=myIndex, body=queryBody)
+    def query(self, queryBody, allm=True, dMetrics=[], debug=False):
+        res = self.esInstance.search(index=self.myIndex, body=queryBody)
         if debug == True:
             print "%---------------------------------------------------------%"
             print "Raw JSON Ouput"
@@ -97,9 +99,9 @@ class Connector():
     def localData(self):
         return "use local data"
 
-    def aggQuery(self, queryBody, myIndex="logstash-*"):
+    def aggQuery(self, queryBody):
         try:
-            res = self.esInstance.search(index=myIndex, body=queryBody)
+            res = self.esInstance.search(index=self.myIndex, body=queryBody)
         except Exception as inst:
             logger.error('[%s] : [ERROR] Exception while executing ES query with %s and %s', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
             sys.exit(2)
