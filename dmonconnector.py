@@ -180,7 +180,12 @@ if __name__ == '__main__':
         dformat.dict2csv(gpacketResponse, qpacket, packet_file)
 
         gnodeManagerResponse = dmonConnector.aggQuery(qnodeManager)
-        dformat.dict2csv(gnodeManagerResponse, qnodeManager, nodeManager_file)
+        if gnodeManagerResponse['aggregations'].values()[0].values()[0]:
+            dformat.dict2csv(gnodeManagerResponse, qnodeManager, nodeManager_file)
+        else:
+            logger.info('[%s] : [INFO] Empty response from  %s no Node Manager detected!', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), node)
+
+
 
         gjvmNodeManagerResponse = dmonConnector.aggQuery(qjvmNodeManager)
         if gjvmNodeManagerResponse['aggregations'].values()[0].values()[0]:
