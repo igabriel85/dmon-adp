@@ -92,10 +92,45 @@ class DataFormatter():
         current.to_csv(mergedFile)
 
     def chainMergeSystem(self):
+        logger.info('[%s] : [INFO] Startig system metrics merge .......',
+                                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        # Read files
         allIterface = glob.glob(os.path.join(self.dataDir, "Interface_*.csv"))
+        allLoad = glob.glob(os.path.join(self.dataDir, "Load_*.csv"))
+        allMemory = glob.glob(os.path.join(self.dataDir, "Memory_*.csv"))
+        allPackets = glob.glob(os.path.join(self.dataDir, "Packets_*.csv"))
+
+        # Name of merged files
         mergedInterface = os.path.join(self.dataDir, "Interface.csv")
-        colNames = {'rx': 'rx_master', 'tx': 'tx_master'}
-        self.chainMerge(allIterface, mergedInterface, colNames)
+        mergedLoad = os.path.join(self.dataDir, "Load.csv")
+        mergedMemory = os.path.join(self.dataDir, "Memory.csv")
+        mergedPacket = os.path.join(self.dataDir, "Packets.csv")
+
+        colNamesInterface = {'rx': 'rx_master', 'tx': 'tx_master'}
+        self.chainMerge(allIterface, mergedInterface, colNamesInterface)
+        logger.info('[%s] : [INFO] Interface metrics merge complete',
+                                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+
+        colNamesPacket = {'rx': 'rx_master', 'tx': 'tx_master'}
+        self.chainMerge(allPackets, mergedPacket, colNamesPacket)
+        logger.info('[%s] : [INFO] Packet metrics merge complete',
+                                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+
+        colNamesLoad = {'shortterm': 'shortterm_master','midterm': 'midterm_master','longterm': 'longterm_master'}
+        self.chainMerge(allLoad, mergedLoad, colNamesLoad)
+        logger.info('[%s] : [INFO] Load metrics merge complete',
+                                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+
+        colNamesMemory = {'cached': 'cached_master', 'buffered': 'buffered_master',
+                          'used': 'used_master', 'free': 'free_master'}
+        self.chainMerge(allMemory, mergedMemory, colNamesMemory)
+        logger.info('[%s] : [INFO] Memory metrics merge complete',
+                                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+
+        logger.info('[%s] : [INFO] Sistem metrics merge complete',
+                                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+
+
 
 
     def dict2csv(self, response, query, filename):
