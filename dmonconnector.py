@@ -28,7 +28,7 @@ import time
 from dataformatter import DataFormatter
 from pyQueryConstructor import QueryConstructor
 
-dataDir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+
 
 
 class Connector():
@@ -99,6 +99,19 @@ class Connector():
     def localData(self):
         return "use local data"
 
+    def getInterval(self):
+        nUrl = "http://%s:%s/dmon/v1/overlord/aux/interval" % (self.esEndpoint, self.dmonPort)
+        logger.info('[%s] : [INFO] dmon get interval url -> %s', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), nUrl)
+        try:
+            rInterval = requests.get(nUrl)
+        except Exception as inst:
+            logger.error('[%s] : [ERROR] Exception has occured while connecting to dmon with type %s at arguments %s',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+            print "Can't connect to dmon at %s port %s" % (self.esEndpoint, self.dmonPort)
+            sys.exit(2)
+        rData = rInterval.json()
+        return rData
+
     def aggQuery(self, queryBody):
         try:
             res = self.esInstance.search(index=self.myIndex, body=queryBody)
@@ -114,21 +127,21 @@ class Connector():
         nUrl = "http://%s:%s/dmon/v1/observer/nodes" % (self.esEndpoint, self.dmonPort)
         logger.info('[%s] : [INFO] dmon get node url -> %s', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), nUrl)
         try:
-           rdmonNode = requests.get(nUrl)
+            rdmonNode = requests.get(nUrl)
         except Exception as inst:
-           logger.error('[%s] : [ERROR] Exception has occured while connecting to dmon with type %s at arguments %s', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
-           print "Can't connect to dmon at %s port %s" % (self.esEndpoint, self.dmonPort)
-           sys.exit(2)
+            logger.error('[%s] : [ERROR] Exception has occured while connecting to dmon with type %s at arguments %s', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+            print "Can't connect to dmon at %s port %s" % (self.esEndpoint, self.dmonPort)
+            sys.exit(2)
         rdata = rdmonNode.json()
         nodes = []
         for e in rdata['Nodes']:
-          for k in e:
-            nodes.append(k)
+            for k in e:
+                nodes.append(k)
         return nodes
 
 
 if __name__ == '__main__':
-
+    dataDir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
     #Standard query values
     # qte = 1475842980000
     # qlte = 1475845200000
@@ -211,11 +224,6 @@ if __name__ == '__main__':
 
     gjvmNameNode = dmonConnector.aggQuery(qjvmNameNode)
     dformat.dict2csv(gjvmNameNode, qjvmNameNode, jvmNameNode_file)
-
-
-
-
-
 
     #print testConnector.info()
     #response = testConnector.aggQuery(query)
