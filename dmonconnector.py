@@ -87,6 +87,19 @@ class Connector():
             sys.exit(2)
         return res
 
+    def roles(self):
+        nUrl = "http://%s:%s/dmon/v1/overlord/nodes/roles" % (self.esEndpoint, self.dmonPort)
+        logger.info('[%s] : [INFO] dmon get roles url -> %s', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), nUrl)
+        try:
+            rRoles = requests.get(nUrl)
+        except Exception as inst:
+            logger.error('[%s] : [ERROR] Exception has occured while connecting to dmon with type %s at arguments %s',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+            print "Can't connect to dmon at %s port %s" % (self.esEndpoint, self.dmonPort)
+            sys.exit(2)
+        rData = rRoles.json()
+        return rData
+
     def pushAnomaly(self):
         return "push andomaly"
 
