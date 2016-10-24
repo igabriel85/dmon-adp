@@ -51,6 +51,43 @@ class QueryConstructor():
         file = "NM_%s.csv" % host
         return qstring, file
 
+    def queueResourceString(self):
+        qstring = "type:\"resourcemanager-metrics\" AND serviceMetrics:\"QueueMetrics\""
+        file = "ResourceManagerQueue.csv"
+        return qstring, file
+
+    def clusterMetricsSring(self):
+        qstring = "type:\"resourcemanager-metrics\" AND ClusterMetrics:\"ResourceManager\""
+        file = "ClusterMetrics.csv"
+        return qstring, file
+
+    def jvmMapTask(self, host):
+        qstring = "hostname:\"%s\" AND type:\"maptask-metrics\"" % host  # TODO add per process name
+        file = "JVM_MapTask_%s.csv" % host
+        return qstring, file
+
+    def jvmResourceManagerString(self):
+        qstring = "type:\"resourcemanager-metrics\" AND serviceType:\"jvm\""
+        file = "JVM_RM.csv"
+        return qstring, file
+
+    def datanodeString(self, host):
+        qstring = "type:\"datanode-metrics\" AND serviceType:\"dfs\" AND hostname:\"%s\"" % host
+        file = 'DN_%s.csv' % host
+        return qstring, file
+
+    def loadAverage(self):
+        return "Average load across all nodes!"
+
+    def memoryAverage(self):
+        return "Average memory across all nodes!"
+
+    def interfaceAverage(self):
+        return "Average interface across all nodes!"
+
+    def packetAverage(self):
+        return "Average packets across all nodes!"
+
     def yarnNodeManager(self, qstring, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
                             qmin_doc_count=1):
 
@@ -86,7 +123,6 @@ class QueryConstructor():
         cqueryd = cquery.to_dict()
         return cqueryd
 
-
     def systemLoadQuery(self, qstring, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
                             qmin_doc_count=1):
         cquery = Dict()
@@ -110,7 +146,6 @@ class QueryConstructor():
         cquery.aggs["2"].aggs["4"].avg.field = "longterm"
         cqueryd = cquery.to_dict()
         return cqueryd
-
 
     def systemMemoryQuery(self, qstring, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
                             qmin_doc_count=1):
@@ -220,7 +255,6 @@ class QueryConstructor():
         cqueryd = cquery.to_dict()
         return cqueryd
 
-
     def dfsFSQuery(self, qstring, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
                             qmin_doc_count=1):
         cquery = Dict()
@@ -321,6 +355,167 @@ class QueryConstructor():
         cquery.aggs["13"].aggs["26"].avg.field = "LogInfo"
         cqueryd = cquery.to_dict()
         return cqueryd
+
+    def resourceQueueQuery(self, qstring, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
+                            qmin_doc_count=1):
+
+        cquery = Dict()
+        cquery.query.filtered.query.query_string.query = qstring
+        cquery.query.filtered.query.query_string.analyze_wildcard = wildCard
+        cquery.query.filtered.filter.bool.must = [
+            {"range": {"@timestamp": {"gte": qgte, "lte": qlte, "format": qtformat}}}]
+        cquery.query.filtered.filter.bool.must_not = []
+        cquery.size = qsize
+
+        cquery.aggs["23"].date_histogram.field = "@timestamp"
+        cquery.aggs["23"].date_histogram.interval = qinterval
+        cquery.aggs["23"].date_histogram.time_zone = "Europe/Helsinki"
+        cquery.aggs["23"].date_histogram.min_doc_count = qmin_doc_count
+        cquery.aggs["23"].date_histogram.extended_bounds.min = qgte
+        cquery.aggs["23"].date_histogram.extended_bounds.max = qlte
+
+        # Resource Manager Queue Metrics
+        cquery.aggs["23"].aggs["1"].avg.field = "running_0"
+        cquery.aggs["23"].aggs["2"].avg.field = "running_60"
+        cquery.aggs["23"].aggs["3"].avg.field = "running_300"
+        cquery.aggs["23"].aggs["4"].avg.field = "running_1440"
+        cquery.aggs["23"].aggs["5"].avg.field = "AppsSubmitted"
+        cquery.aggs["23"].aggs["6"].avg.field = "AppsPending"
+        cquery.aggs["23"].aggs["7"].avg.field = "AppsCompleted"
+        cquery.aggs["23"].aggs["8"].avg.field = "AllocatedMB"
+        cquery.aggs["23"].aggs["9"].avg.field = "AllocatedVCores"
+        cquery.aggs["23"].aggs["10"].avg.field = "AllocatedContainers"
+        cquery.aggs["23"].aggs["11"].avg.field = "AggregateContainersAllocated"
+        cquery.aggs["23"].aggs["12"].avg.field = "AggregateContainersReleased"
+        cquery.aggs["23"].aggs["13"].avg.field = "AvailableMB"
+        cquery.aggs["23"].aggs["14"].avg.field = "AvailableVCores"
+        cquery.aggs["23"].aggs["15"].avg.field = "PendingVCores"
+        cquery.aggs["23"].aggs["16"].avg.field = "PendingContainers"
+        cquery.aggs["23"].aggs["17"].avg.field = "ReservedMB"
+        cquery.aggs["23"].aggs["18"].avg.field = "ReservedContainers"
+        cquery.aggs["23"].aggs["19"].avg.field = "ActiveUsers"
+        cquery.aggs["23"].aggs["20"].avg.field = "ActiveApplications"
+        cquery.aggs["23"].aggs["21"].avg.field = "AppAttemptFirstContainerAllocationDelayNumOps"
+        cquery.aggs["23"].aggs["22"].avg.field = "AppAttemptFirstContainerAllocationDelayAvgTime"
+        cqueryd = cquery.to_dict()
+        return cqueryd
+
+    def clusterMetricsQuery(self, qstring, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
+                            qmin_doc_count=1):
+
+        cquery = Dict()
+        cquery.query.filtered.query.query_string.query = qstring
+        cquery.query.filtered.query.query_string.analyze_wildcard = wildCard
+        cquery.query.filtered.filter.bool.must = [
+            {"range": {"@timestamp": {"gte": qgte, "lte": qlte, "format": qtformat}}}]
+        cquery.query.filtered.filter.bool.must_not = []
+        cquery.size = qsize
+
+        cquery.aggs["2"].date_histogram.field = "@timestamp"
+        cquery.aggs["2"].date_histogram.interval = qinterval
+        cquery.aggs["2"].date_histogram.time_zone = "Europe/Helsinki"
+        cquery.aggs["2"].date_histogram.min_doc_count = qmin_doc_count
+        cquery.aggs["2"].date_histogram.extended_bounds.min = qgte
+        cquery.aggs["2"].date_histogram.extended_bounds.max = qlte
+
+        # Cluster Metrics
+        cquery.aggs["2"].aggs["1"].avg.field = "NumActiveNMs"
+        cquery.aggs["2"].aggs["3"].avg.field = "NumDecommissionedNMs"
+        cquery.aggs["2"].aggs["4"].avg.field = "NumLostNMs"
+        cquery.aggs["2"].aggs["5"].avg.field = "NumUnhealthyNMs"
+        cquery.aggs["2"].aggs["6"].avg.field = "AMLaunchDelayNumOps"
+        cquery.aggs["2"].aggs["7"].avg.field = "AMLaunchDelayAvgTime"
+        cquery.aggs["2"].aggs["8"].avg.field = "AMRegisterDelayNumOps"
+        cquery.aggs["2"].aggs["9"].avg.field = "AMRegisterDelayAvgTime"
+        cquery.aggs["2"].aggs["10"].avg.field = "NumRebootedNMs"
+        cqueryd = cquery.to_dict()
+        return cqueryd
+
+
+    def datanodeMetricsQuery(self, qstring, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
+                            qmin_doc_count=1):
+
+        cquery = Dict()
+        cquery.query.filtered.query.query_string.query = qstring
+        cquery.query.filtered.query.query_string.analyze_wildcard = wildCard
+        cquery.query.filtered.filter.bool.must = [
+            {"range": {"@timestamp": {"gte": qgte, "lte": qlte, "format": qtformat}}}]
+        cquery.query.filtered.filter.bool.must_not = []
+        cquery.size = qsize
+
+        cquery.aggs["12"].date_histogram.field = "@timestamp"
+        cquery.aggs["12"].date_histogram.interval = qinterval
+        cquery.aggs["12"].date_histogram.time_zone = "Europe/Helsinki"
+        cquery.aggs["12"].date_histogram.min_doc_count = qmin_doc_count
+        cquery.aggs["12"].date_histogram.extended_bounds.min = qgte
+        cquery.aggs["12"].date_histogram.extended_bounds.max = qlte
+
+        # DataNode Metrics
+        cquery.aggs["12"].aggs["1"].avg.field = "BytesWritten"
+        cquery.aggs["12"].aggs["2"].avg.field = "TotalWriteTime"
+        cquery.aggs["12"].aggs["3"].avg.field = "BytesRead"
+        cquery.aggs["12"].aggs["4"].avg.field = "TotalReadTime"
+        cquery.aggs["12"].aggs["5"].avg.field = "BlocksWritten"
+        cquery.aggs["12"].aggs["6"].avg.field = "BlocksRead"
+        cquery.aggs["12"].aggs["7"].avg.field = "BlocksReplicated"
+        cquery.aggs["12"].aggs["8"].avg.field = "BlocksRemoved"
+        cquery.aggs["12"].aggs["9"].avg.field = "BlocksVerified"
+        cquery.aggs["12"].aggs["10"].avg.field = "BlockVerificationFailures"
+        cquery.aggs["12"].aggs["11"].avg.field = "BlocksCached"
+        cquery.aggs["12"].aggs["13"].avg.field = "BlocksUncached"
+        cquery.aggs["12"].aggs["14"].avg.field = "ReadsFromLocalClient"
+        cquery.aggs["12"].aggs["15"].avg.field = "ReadsFromRemoteClient"
+        cquery.aggs["12"].aggs["16"].avg.field = "WritesFromLocalClient"
+        cquery.aggs["12"].aggs["17"].avg.field = "WritesFromRemoteClient"
+        cquery.aggs["12"].aggs["18"].avg.field = "BlocksGetLocalPathInfo"
+        cquery.aggs["12"].aggs["19"].avg.field = "RemoteBytesRead"
+        cquery.aggs["12"].aggs["20"].avg.field = "RemoteBytesWritten"
+        cquery.aggs["12"].aggs["21"].avg.field = "RamDiskBlocksWrite"
+        cquery.aggs["12"].aggs["22"].avg.field = "RamDiskBlocksWriteFallback"
+        cquery.aggs["12"].aggs["23"].avg.field = "RamDiskBytesWrite"
+        cquery.aggs["12"].aggs["24"].avg.field = "RamDiskBlocksReadHits"
+        cquery.aggs["12"].aggs["25"].avg.field = "RamDiskBlocksEvicted"
+        cquery.aggs["12"].aggs["27"].avg.field = "RamDiskBlocksEvictedWithoutRead"
+        cquery.aggs["12"].aggs["28"].avg.field = "RamDiskBlocksEvictionWindowMsNumOps"
+        cquery.aggs["12"].aggs["29"].avg.field = "RamDiskBlocksEvictionWindowMsAvgTime"
+        cquery.aggs["12"].aggs["30"].avg.field = "RamDiskBlocksLazyPersisted"
+        cquery.aggs["12"].aggs["31"].avg.field = "RamDiskBlocksDeletedBeforeLazyPersisted"
+        cquery.aggs["12"].aggs["32"].avg.field = "RamDiskBytesLazyPersisted"
+        cquery.aggs["12"].aggs["33"].avg.field = "RamDiskBlocksLazyPersistWindowMsNumOps"
+        cquery.aggs["12"].aggs["34"].avg.field = "RamDiskBlocksLazyPersistWindowMsAvgTime"
+        cquery.aggs["12"].aggs["35"].avg.field = "FsyncCount"
+        cquery.aggs["12"].aggs["36"].avg.field = "VolumeFailures"
+        cquery.aggs["12"].aggs["37"].avg.field = "DatanodeNetworkErrors"
+        cquery.aggs["12"].aggs["38"].avg.field = "ReadBlockOpNumOps"
+        cquery.aggs["12"].aggs["39"].avg.field = "ReadBlockOpAvgTime"
+        cquery.aggs["12"].aggs["40"].avg.field = "CopyBlockOpNumOps"
+        cquery.aggs["12"].aggs["41"].avg.field = "CopyBlockOpAvgTime"
+        cquery.aggs["12"].aggs["42"].avg.field = "ReplaceBlockOpNumOps"
+        cquery.aggs["12"].aggs["43"].avg.field = "ReplaceBlockOpAvgTime"
+        cquery.aggs["12"].aggs["44"].avg.field = "HeartbeatsNumOps"
+        cquery.aggs["12"].aggs["45"].avg.field = "HeartbeatsAvgTime"
+        cquery.aggs["12"].aggs["46"].avg.field = "BlockReportsNumOps"
+        cquery.aggs["12"].aggs["47"].avg.field = "BlockReportsAvgTime"
+        cquery.aggs["12"].aggs["48"].avg.field = "IncrementalBlockReportsNumOps"
+        cquery.aggs["12"].aggs["49"].avg.field = "IncrementalBlockReportsAvgTime"
+        cquery.aggs["12"].aggs["50"].avg.field = "CacheReportsNumOps"
+        cquery.aggs["12"].aggs["51"].avg.field = "CacheReportsAvgTime"
+        cquery.aggs["12"].aggs["52"].avg.field = "PacketAckRoundTripTimeNanosNumOps"
+        cquery.aggs["12"].aggs["53"].avg.field = "FlushNanosNumOps"
+        cquery.aggs["12"].aggs["54"].avg.field = "FlushNanosAvgTime"
+        cquery.aggs["12"].aggs["55"].avg.field = "FsyncNanosNumOps"
+        cquery.aggs["12"].aggs["56"].avg.field = "FsyncNanosAvgTime"
+        cquery.aggs["12"].aggs["57"].avg.field = "SendDataPacketBlockedOnNetworkNanosNumOps"
+        cquery.aggs["12"].aggs["58"].avg.field = "SendDataPacketBlockedOnNetworkNanosAvgTime"
+        cquery.aggs["12"].aggs["59"].avg.field = "SendDataPacketTransferNanosNumOps"
+        cquery.aggs["12"].aggs["60"].avg.field = "SendDataPacketTransferNanosAvgTime"
+        cquery.aggs["12"].aggs["61"].avg.field = "WriteBlockOpNumOps"
+        cquery.aggs["12"].aggs["62"].avg.field = "WriteBlockOpAvgTime"
+        cquery.aggs["12"].aggs["63"].avg.field = "BlockChecksumOpNumOps"
+        cquery.aggs["12"].aggs["64"].avg.field = "BlockChecksumOpAvgTime"
+        cqueryd = cquery.to_dict()
+        return cqueryd
+
 
 
     def yarnQuery(self):
