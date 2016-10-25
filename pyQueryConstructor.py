@@ -76,16 +76,31 @@ class QueryConstructor():
         file = 'DN_%s.csv' % host
         return qstring, file
 
-    def loadAverage(self):
+    def mrappmasterString(self):
+        qstring = "type:\"mrappmaster-metrics\" AND serviceMetrics:\"MRAppMetrics\""
+        file = 'MRAPP.csv'
+        return qstring, file
+
+    def jvmMrappmasterString(self):
+        qstring = "type:\"mrappmaster-metrics\" AND serviceMetrics:\"JvmMetrics\""
+        file = "JVM_MRAPP.csv"
+        return qstring, file
+
+    def fsopDurationsString(self):
+        qstring = "type:\"resourcemanager-metrics\" AND serviceMetrics:\"FSOpDurations\""
+        file = 'FSOP.csv'
+        return qstring, file
+
+    def loadAverage(self):  # TODO
         return "Average load across all nodes!"
 
     def memoryAverage(self):
         return "Average memory across all nodes!"
 
-    def interfaceAverage(self):
+    def interfaceAverage(self):  # TODO
         return "Average interface across all nodes!"
 
-    def packetAverage(self):
+    def packetAverage(self):  # TODO
         return "Average packets across all nodes!"
 
     def yarnNodeManager(self, qstring, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
@@ -430,7 +445,6 @@ class QueryConstructor():
         cquery.aggs["2"].aggs["10"].avg.field = "NumRebootedNMs"
         cqueryd = cquery.to_dict()
         return cqueryd
-
 
     def datanodeMetricsQuery(self, qstring, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
                             qmin_doc_count=1):
