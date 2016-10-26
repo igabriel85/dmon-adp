@@ -11,8 +11,8 @@ if __name__ == '__main__':
     #Standard query values
     # qte = 1475842980000
     # qlte = 1475845200000
-    qgte = 1475842980000
-    qlte = 1475845200000
+    qgte = 1477490400000
+    qlte = 1477491600000
     qsize = 0
     qinterval = "10s"
 
@@ -97,8 +97,8 @@ if __name__ == '__main__':
     qdfs = qConstructor.dfsQuery(dfs, qgte, qlte, qsize, qinterval)
     qdfsFs = qConstructor.dfsFSQuery(dfsFs, qgte, qlte, qsize, qinterval)
     qjvmNameNode = qConstructor.jvmNNquery(jvmNameNodeString, qgte, qlte, qsize, qinterval)
-    qqueue = qConstructor.clusterMetricsQuery(queue, qgte, qlte, qsize, qinterval)
-    qcluster = qConstructor.clusterMetricsQuery(queue, qgte, qlte, qsize, qinterval)
+    qqueue = qConstructor.resourceQueueQuery(queue, qgte, qlte, qsize, qinterval)
+    qcluster = qConstructor.clusterMetricsQuery(cluster, qgte, qlte, qsize, qinterval)
     qjvmMrapp = qConstructor.jvmNNquery(jvmMrapp, qgte, qlte, qsize, qinterval)
     qfsop = qConstructor.fsopDurationsQuery(fsop, qgte, qlte, qsize, qinterval)
 
