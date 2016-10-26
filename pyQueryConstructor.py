@@ -530,7 +530,59 @@ class QueryConstructor():
         cqueryd = cquery.to_dict()
         return cqueryd
 
+    def fsopDurationsQuery(self, qstring, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
+                            qmin_doc_count=1):
+        cquery = Dict()
+        cquery.query.filtered.query.query_string.query = qstring
+        cquery.query.filtered.query.query_string.analyze_wildcard = wildCard
+        cquery.query.filtered.filter.bool.must = [
+            {"range": {"@timestamp": {"gte": qgte, "lte": qlte, "format": qtformat}}}]
+        cquery.query.filtered.filter.bool.must_not = []
+        cquery.size = qsize
 
+        cquery.aggs["2"].date_histogram.field = "@timestamp"
+        cquery.aggs["2"].date_histogram.interval = qinterval
+        cquery.aggs["2"].date_histogram.time_zone = "Europe/Helsinki"
+        cquery.aggs["2"].date_histogram.min_doc_count = qmin_doc_count
+        cquery.aggs["2"].date_histogram.extended_bounds.min = qgte
+        cquery.aggs["2"].date_histogram.extended_bounds.max = qlte
+
+        # FSOpDuration metrics
+        cquery.aggs["2"].aggs["1"].avg.field = "ContinuousSchedulingRunNumOps"
+        cquery.aggs["2"].aggs["3"].avg.field = "ContinuousSchedulingRunAvgTime"
+        cquery.aggs["2"].aggs["4"].avg.field = "ContinuousSchedulingRunStdevTime"
+        cquery.aggs["2"].aggs["5"].avg.field = "ContinuousSchedulingRunIMinTime"
+        cquery.aggs["2"].aggs["6"].avg.field = "ContinuousSchedulingRunIMaxTime"
+        cquery.aggs["2"].aggs["7"].avg.field = "ContinuousSchedulingRunMinTime"
+        cquery.aggs["2"].aggs["8"].avg.field = "ContinuousSchedulingRunMaxTime"
+        cquery.aggs["2"].aggs["9"].avg.field = "ContinuousSchedulingRunINumOps"
+        cquery.aggs["2"].aggs["10"].avg.field = "NodeUpdateCallNumOps"
+        cquery.aggs["2"].aggs["11"].avg.field = "NodeUpdateCallAvgTime"
+        cquery.aggs["2"].aggs["12"].avg.field = "NodeUpdateCallStdevTime"
+        cquery.aggs["2"].aggs["13"].avg.field = "NodeUpdateCallMinTime"
+        cquery.aggs["2"].aggs["14"].avg.field = "NodeUpdateCallIMinTime"
+        cquery.aggs["2"].aggs["15"].avg.field = "NodeUpdateCallMaxTime"
+        cquery.aggs["2"].aggs["16"].avg.field = "NodeUpdateCallINumOps"
+        cquery.aggs["2"].aggs["17"].avg.field = "UpdateThreadRunNumOps"
+        cquery.aggs["2"].aggs["18"].avg.field = "UpdateThreadRunAvgTime"
+        cquery.aggs["2"].aggs["19"].avg.field = "UpdateThreadRunStdevTime"
+        cquery.aggs["2"].aggs["20"].avg.field = "UpdateThreadRunIMinTime"
+        cquery.aggs["2"].aggs["21"].avg.field = "UpdateThreadRunMinTime"
+        cquery.aggs["2"].aggs["22"].avg.field = "UpdateThreadRunMaxTime"
+        cquery.aggs["2"].aggs["23"].avg.field = "UpdateThreadRunINumOps"
+        cquery.aggs["2"].aggs["24"].avg.field = "UpdateCallNumOps"
+        cquery.aggs["2"].aggs["25"].avg.field = "UpdateCallAvgTime"
+        cquery.aggs["2"].aggs["26"].avg.field = "UpdateCallStdevTime"
+        cquery.aggs["2"].aggs["27"].avg.field = "UpdateCallIMinTime"
+        cquery.aggs["2"].aggs["28"].avg.field = "UpdateCallMinTime"
+        cquery.aggs["2"].aggs["29"].avg.field = "UpdateCallMaxTime"
+        cquery.aggs["2"].aggs["30"].avg.field = "UpdateCallINumOps"
+        cquery.aggs["2"].aggs["31"].avg.field = "PreemptCallNumOps"
+        cquery.aggs["2"].aggs["32"].avg.field = "PreemptCallAvgTime"
+        cquery.aggs["2"].aggs["33"].avg.field = "PreemptCallStdevTime"
+        cquery.aggs["2"].aggs["34"].avg.field = "PreemptCallINumOps"
+        cqueryd = cquery.to_dict()
+        return cqueryd
 
     def yarnQuery(self):
         return "Yarn metrics query"

@@ -1929,7 +1929,253 @@ if test12 != datanode:
 else:
     print "Passed Test 12"
 
+fsop = {
+  "query": {
+    "filtered": {
+      "query": {
+        "query_string": {
+          "analyze_wildcard": True,
+          "query": "type:\"resourcemanager-metrics\" AND serviceMetrics:\"FSOpDurations\""
+        }
+      },
+      "filter": {
+        "bool": {
+          "must": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": 1475842980000,
+                  "lte": 1475845200000,
+                  "format": "epoch_millis"
+                }
+              }
+            }
+          ],
+          "must_not": []
+        }
+      }
+    }
+  },
+  "size": 0,
+  "aggs": {
+    "2": {
+      "date_histogram": {
+        "field": "@timestamp",
+        "interval": "1s",
+        "time_zone": "Europe/Helsinki",
+        "min_doc_count": 1,
+        "extended_bounds": {
+          "min": 1475842980000,
+          "max": 1475845200000
+        }
+      },
+      "aggs": {
+        "1": {
+          "avg": {
+            "field": "ContinuousSchedulingRunNumOps"
+          }
+        },
+        "3": {
+          "avg": {
+            "field": "ContinuousSchedulingRunAvgTime"
+          }
+        },
+        "4": {
+          "avg": {
+            "field": "ContinuousSchedulingRunStdevTime"
+          }
+        },
+        "5": {
+          "avg": {
+            "field": "ContinuousSchedulingRunIMinTime"
+          }
+        },
+        "6": {
+          "avg": {
+            "field": "ContinuousSchedulingRunIMaxTime"
+          }
+        },
+        "7": {
+          "avg": {
+            "field": "ContinuousSchedulingRunMinTime"
+          }
+        },
+        "8": {
+          "avg": {
+            "field": "ContinuousSchedulingRunMaxTime"
+          }
+        },
+        "9": {
+          "avg": {
+            "field": "ContinuousSchedulingRunINumOps"
+          }
+        },
+        "10": {
+          "avg": {
+            "field": "NodeUpdateCallNumOps"
+          }
+        },
+        "11": {
+          "avg": {
+            "field": "NodeUpdateCallAvgTime"
+          }
+        },
+        "12": {
+          "avg": {
+            "field": "NodeUpdateCallStdevTime"
+          }
+        },
+        "13": {
+          "avg": {
+            "field": "NodeUpdateCallMinTime"
+          }
+        },
+        "14": {
+          "avg": {
+            "field": "NodeUpdateCallIMinTime"
+          }
+        },
+        "15": {
+          "avg": {
+            "field": "NodeUpdateCallMaxTime"
+          }
+        },
+        "16": {
+          "avg": {
+            "field": "NodeUpdateCallINumOps"
+          }
+        },
+        "17": {
+          "avg": {
+            "field": "UpdateThreadRunNumOps"
+          }
+        },
+        "18": {
+          "avg": {
+            "field": "UpdateThreadRunAvgTime"
+          }
+        },
+        "19": {
+          "avg": {
+            "field": "UpdateThreadRunStdevTime"
+          }
+        },
+        "20": {
+          "avg": {
+            "field": "UpdateThreadRunIMinTime"
+          }
+        },
+        "21": {
+          "avg": {
+            "field": "UpdateThreadRunMinTime"
+          }
+        },
+        "22": {
+          "avg": {
+            "field": "UpdateThreadRunMaxTime"
+          }
+        },
+        "23": {
+          "avg": {
+            "field": "UpdateThreadRunINumOps"
+          }
+        },
+        "24": {
+          "avg": {
+            "field": "UpdateCallNumOps"
+          }
+        },
+        "25": {
+          "avg": {
+            "field": "UpdateCallAvgTime"
+          }
+        },
+        "26": {
+          "avg": {
+            "field": "UpdateCallStdevTime"
+          }
+        },
+        "27": {
+          "avg": {
+            "field": "UpdateCallIMinTime"
+          }
+        },
+        "28": {
+          "avg": {
+            "field": "UpdateCallMinTime"
+          }
+        },
+        "29": {
+          "avg": {
+            "field": "UpdateCallMaxTime"
+          }
+        },
+        "30": {
+          "avg": {
+            "field": "UpdateCallINumOps"
+          }
+        },
+        "31": {
+          "avg": {
+            "field": "PreemptCallNumOps"
+          }
+        },
+        "32": {
+          "avg": {
+            "field": "PreemptCallAvgTime"
+          }
+        },
+        "33": {
+          "avg": {
+            "field": "PreemptCallStdevTime"
+          }
+        },
+        "34": {
+          "avg": {
+            "field": "PreemptCallINumOps"
+          }
+        }
+      }
+    }
+  }
+}
 
 
-    #print v
-#print datanode['aggs']['12']['aggs'].values()
+
+qstring13 = "type:\"resourcemanager-metrics\" AND serviceMetrics:\"FSOpDurations\""
+
+test13 = qConstructor.fsopDurationsQuery(qstring13, qgte, qlte, qsize, qinterval, wildCard, qtformat,
+                                          qmin_doc_count)
+
+print "Gen->%s" % test13
+print "Org->%s" % fsop
+if test13 != fsop:
+    print "Failed Test 12"
+    print "+" * 50
+    print "Gen-q->%s" % test13['query']
+    print "Org-q->%s" % fsop['query']
+    print "-" * 50
+    print "Gen-a->%s" %test13['aggs']
+    print "Org-a->%s" %fsop['aggs']
+    print "-" * 50
+    print "Gen-ad->%s" %sorted(test13['aggs']['2']['aggs'].keys())
+    print "Org-ad->%s" %sorted(fsop['aggs']['2']['aggs'].keys())
+    print "-" * 50
+    for k, v in test13['aggs']['2']['aggs'].iteritems():
+        if v != fsop['aggs']['2']['aggs'][k]:
+            print "%" * 50
+            print "Mismatch Key value in original and generated"
+            print "Generate has %s -> %s" % (k, v)
+            print "Original has %s -> %s" %(k, fsop['aggs']['2']['aggs'][k])
+            print "%" * 50
+        else:
+            print "Match"
+
+    print "-" * 50
+    print "Gen-s>%s" %test13['size']
+    print "Org-s>%s" %fsop['size']
+    print "+" * 50
+else:
+    print "Passed Test 13"
+
+
