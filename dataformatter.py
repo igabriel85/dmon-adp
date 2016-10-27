@@ -41,6 +41,12 @@ class DataFormatter():
         return 'filter dataset'
 
     def merge(self, csvOne, csvTwo, merged):
+        '''
+        :param csvOne: first csv to load
+        :param csvTwo: second csv to load
+        :param merged: merged file name
+        :return:
+        '''
         fone = pd.read_csv(csvOne)
         ftwo = pd.read_csv(csvTwo)
         mergedCsv = fone.merge(ftwo, on='key')
@@ -63,15 +69,14 @@ class DataFormatter():
         concatDF = pd.concat(df_from_each_file, ignore_index=True)
         concatDF.to_csv(merged)
 
-    def chainMerge(self, lFiles, mergedFile, colNames, iterStart=1):
+    def chainMerge(self, lFiles, colNames, iterStart=1):
         '''
         :param lFiles: -> list of files to be opened
         :param mergedFile: -> name of merged file
         :param colNames: -> dict with master column names
         :param iterStart: -> start of iteration default is 1
-        :return:
+        :return: -> merged dataframe
         '''
-
         #Parsing colNames
         slaveCol = {}
         for k, v in colNames.iteritems():
@@ -89,7 +94,16 @@ class DataFormatter():
             for k, v in slaveCol.iteritems():
                 iterSlave[k] = v+str(i)
             current = current.merge(frame).rename(columns=iterSlave)
-        current.to_csv(mergedFile)
+        #current.to_csv(mergedFile)
+        return current
+
+    def df2csv(self, dataFrame, mergedFile):
+        '''
+        :param dataFrame: dataframe to save as csv
+        :param mergedFile: merged csv file name
+        :return:
+        '''
+        dataFrame.to_csv(mergedFile)
 
     def chainMergeSystem(self):
         logger.info('[%s] : [INFO] Startig system metrics merge .......',
@@ -107,31 +121,32 @@ class DataFormatter():
         mergedPacket = os.path.join(self.dataDir, "Packets.csv")
 
         colNamesInterface = {'rx': 'rx_master', 'tx': 'tx_master'}
-        self.chainMerge(allIterface, mergedInterface, colNamesInterface)
+        df_interface = self.chainMerge(allIterface, colNamesInterface)
+        self.df2csv(df_interface, mergedInterface)
         logger.info('[%s] : [INFO] Interface metrics merge complete',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
 
         colNamesPacket = {'rx': 'rx_master', 'tx': 'tx_master'}
-        self.chainMerge(allPackets, mergedPacket, colNamesPacket)
+        df_packet = self.chainMerge(allPackets, colNamesPacket)
+        self.df2csv(df_packet, mergedPacket)
         logger.info('[%s] : [INFO] Packet metrics merge complete',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
 
-        colNamesLoad = {'shortterm': 'shortterm_master','midterm': 'midterm_master','longterm': 'longterm_master'}
-        self.chainMerge(allLoad, mergedLoad, colNamesLoad)
+        colNamesLoad = {'shortterm': 'shortterm_master', 'midterm': 'midterm_master', 'longterm': 'longterm_master'}
+        df_load = self.chainMerge(allLoad, colNamesLoad)
+        self.df2csv(df_load, mergedLoad)
         logger.info('[%s] : [INFO] Load metrics merge complete',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
 
         colNamesMemory = {'cached': 'cached_master', 'buffered': 'buffered_master',
                           'used': 'used_master', 'free': 'free_master'}
-        self.chainMerge(allMemory, mergedMemory, colNamesMemory)
+        df_memory = self.chainMerge(allMemory, colNamesMemory)
+        self.df2csv(df_memory, mergedMemory)
         logger.info('[%s] : [INFO] Memory metrics merge complete',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
 
         logger.info('[%s] : [INFO] Sistem metrics merge complete',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
-
-
-
 
     def dict2csv(self, response, query, filename):
         '''
