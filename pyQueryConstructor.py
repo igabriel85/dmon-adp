@@ -232,8 +232,6 @@ class QueryConstructor():
         cqueryd = cquery.to_dict()
         return cqueryd
 
-
-
     def dfsQuery(self, qstring, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
                             qmin_doc_count=1):
 

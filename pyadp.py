@@ -25,6 +25,12 @@ if __name__ == '__main__':
     dformat = DataFormatter(dataDir)
 
     nodeList = dmonConnector.getNodeList()
+    interval = dmonConnector.getInterval()
+
+    if int(qinterval[:-1]) < interval['System']:
+        logger.warning('[%s] : [WARN] System Interval smaller than set interval!',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+
 
     # per slave unique process name list
     nodeProcessReduce = {}
@@ -42,7 +48,7 @@ if __name__ == '__main__':
         #jvmMapTask, jvmMapTask_file = qConstructor.jvmMapTask(node)
         datanode, datanode_file = qConstructor.datanodeString(node)
         shuffle, shuffle_file = qConstructor.shuffleString(node)
-        print "SHUFFLE ------> %s" % shuffle
+
 
         # Queries
         qload = qConstructor.systemLoadQuery(load, qgte, qlte, qsize, qinterval)
@@ -89,6 +95,13 @@ if __name__ == '__main__':
             logger.info('[%s] : [INFO] Empty response from  %s no shuffle metrics!',
                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), node)
 
+        gdatanode = dmonConnector.aggQuery(qdatanode)
+        if gdatanode['aggregations'].values()[0].values()[0]:
+            dformat.dict2csv(gdatanode, qdatanode, datanode_file)
+        else:
+            logger.info('[%s] : [INFO] Empty response from  %s no datanode metrics!',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), node)
+
 
         # gjvmMapTaskResponse = dmonConnector.aggQuery(qjvmMapTask)
         # if gjvmMapTaskResponse['aggregations'].values()[0].values()[0]:
@@ -133,7 +146,7 @@ if __name__ == '__main__':
             logger.info('[%s] : [INFO] No reduce process for host  %s found',
                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), host)
             pass
-    print nodeProcessMap
+
     for host, processes in nodeProcessMap.iteritems():
         if processes:
             for process in processes:
@@ -165,6 +178,7 @@ if __name__ == '__main__':
     qjvmNameNode = qConstructor.jvmNNquery(jvmNameNodeString, qgte, qlte, qsize, qinterval)
     qqueue = qConstructor.resourceQueueQuery(queue, qgte, qlte, qsize, qinterval)
     qcluster = qConstructor.clusterMetricsQuery(cluster, qgte, qlte, qsize, qinterval)
+    qjvmResMng = qConstructor.jvmNNquery(jvmResMng, qgte, qlte, qsize, qinterval)
     qjvmMrapp = qConstructor.jvmNNquery(jvmMrapp, qgte, qlte, qsize, qinterval)
     qfsop = qConstructor.fsopDurationsQuery(fsop, qgte, qlte, qsize, qinterval)
 
@@ -184,11 +198,18 @@ if __name__ == '__main__':
     gcluster = dmonConnector.aggQuery(qcluster)
     dformat.dict2csv(gcluster, qcluster, cluster_file)
 
+    gjvmResourceManager = dmonConnector.aggQuery(qjvmResMng)
+    dformat.dict2csv(gjvmResourceManager, qjvmResMng, jvmResMng_file)
+
     gjvmMrapp = dmonConnector.aggQuery(qjvmMrapp)
     dformat.dict2csv(gjvmMrapp, qjvmMrapp, jvmMrapp_file)
 
     gfsop = dmonConnector.aggQuery(qfsop)
     dformat.dict2csv(gfsop, qfsop, fsop_file)
+
+
+    # Merge system Files
+    dformat.chainMergeSystem()
 
     #print testConnector.info()
     #response = testConnector.aggQuery(query)
