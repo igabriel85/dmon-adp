@@ -2150,7 +2150,7 @@ test13 = qConstructor.fsopDurationsQuery(qstring13, qgte, qlte, qsize, qinterval
 print "Gen->%s" % test13
 print "Org->%s" % fsop
 if test13 != fsop:
-    print "Failed Test 12"
+    print "Failed Test 13"
     print "+" * 50
     print "Gen-q->%s" % test13['query']
     print "Org-q->%s" % fsop['query']
@@ -2177,5 +2177,181 @@ if test13 != fsop:
     print "+" * 50
 else:
     print "Passed Test 13"
+
+
+shuffle = {
+  "query": {
+    "filtered": {
+      "query": {
+        "query_string": {
+          "query": "serviceMetrics:\"ShuffleMetrics\" AND serviceType:\"mapred\" AND hostname:\"dice.cdh.slave1\"",
+          "analyze_wildcard": True
+        }
+      },
+      "filter": {
+        "bool": {
+          "must": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": 1475842980000,
+                  "lte": 1475845200000,
+                  "format": "epoch_millis"
+                }
+              }
+            }
+          ],
+          "must_not": []
+        }
+      }
+    }
+  },
+  "size": 0,
+  "aggs": {
+    "2": {
+      "date_histogram": {
+        "field": "@timestamp",
+        "interval": "1s",
+        "time_zone": "Europe/Helsinki",
+        "min_doc_count": 1,
+        "extended_bounds": {
+          "min": 1475842980000,
+          "max": 1475845200000
+        }
+      },
+      "aggs": {
+        "1": {
+          "avg": {
+            "field": "ShuffleConnections"
+          }
+        },
+        "3": {
+          "avg": {
+            "field": "ShuffleOutputBytes"
+          }
+        },
+        "4": {
+          "avg": {
+            "field": "ShuffleOutputsFailed"
+          }
+        },
+        "5": {
+          "avg": {
+            "field": "ShuffleOutputsOK"
+          }
+        }
+      }
+    }
+  }
+}
+
+qstring14 = "serviceMetrics:\"ShuffleMetrics\" AND serviceType:\"mapred\" AND hostname:\"dice.cdh.slave1\""
+
+test14 = qConstructor.shuffleQuery(qstring14, qgte, qlte, qsize, qinterval, wildCard, qtformat,
+                                          qmin_doc_count)
+
+print "Gen->%s" % test14
+print "Org->%s" % shuffle
+if test14 != shuffle:
+    print "Failed Test 14"
+    print "+" * 50
+    print "Gen-q->%s" % test14['query']
+    print "Org-q->%s" % shuffle['query']
+    print "-" * 50
+    print "Gen-a->%s" %test14['aggs']
+    print "Org-a->%s" %shuffle['aggs']
+    print "-" * 50
+    print "Gen-ad->%s" %sorted(test14['aggs']['2']['aggs'].keys())
+    print "Org-ad->%s" %sorted(shuffle['aggs']['2']['aggs'].keys())
+    print "-" * 50
+    for k, v in test14['aggs']['2']['aggs'].iteritems():
+        if v != shuffle['aggs']['2']['aggs'][k]:
+            print "%" * 50
+            print "Mismatch Key value in original and generated"
+            print "Generate has %s -> %s" % (k, v)
+            print "Original has %s -> %s" % (k, fsop['aggs']['2']['aggs'][k])
+            print "%" * 50
+        else:
+            print "Match"
+
+    print "-" * 50
+    print "Gen-s>%s" %test14['size']
+    print "Org-s>%s" %shuffle['size']
+    print "+" * 50
+else:
+    print "Passed Test 14"
+
+
+processQ = {
+  "size": 0,
+  "sort": [
+    {
+      "@timestamp": {
+        "order": "desc",
+        "unmapped_type": "boolean"
+      }
+    }
+  ],
+  "query": {
+    "filtered": {
+      "query": {
+        "query_string": {
+          "query": "type:\"reducetask-metrics\" AND serviceType:\"jvm\"",
+          "analyze_wildcard": True
+        }
+      },
+      "filter": {
+        "bool": {
+          "must": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": 1475842980000,
+                  "lte": 1475845200000,
+                  "format": "epoch_millis"
+                }
+              }
+            }
+          ],
+          "must_not": []
+        }
+      }
+    }
+  },
+  "aggs": {
+    "2": {
+      "date_histogram": {
+        "field": "@timestamp",
+        "interval": "1s",
+        "time_zone": "Europe/Helsinki",
+        "min_doc_count": 0,
+        "extended_bounds": {
+          "min": 1475842980000,
+          "max": 1475845200000
+        }
+      }
+    }
+  },
+  "fields": [
+    "*",
+    "_source"
+  ],
+  "script_fields": {},
+  "fielddata_fields": [
+    "@timestamp"
+  ]
+}
+
+qstring15 = "type:\"reducetask-metrics\" AND serviceType:\"jvm\""
+
+test15 = qConstructor.queryByProcess(qstring15, qgte, qlte, qsize, qinterval, wildCard, qtformat,
+                                          0)
+
+print "Gen->%s" % test15
+print "Org->%s" % processQ
+if test15 != processQ:
+    print "Failed Test 15"
+else:
+    print "Passed Test 15"
 
 

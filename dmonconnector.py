@@ -158,8 +158,8 @@ if __name__ == '__main__':
     #Standard query values
     # qte = 1475842980000
     # qlte = 1475845200000
-    qgte = 1475842980000
-    qlte = 1475845200000
+    qgte = 1477561800000
+    qlte = 1477562100000
     qsize = 0
     qinterval = "10s"
 
@@ -169,95 +169,64 @@ if __name__ == '__main__':
     qConstructor = QueryConstructor()
     dformat = DataFormatter(dataDir)
 
-    nodeList = dmonConnector.getNodeList()
-    print nodeList
-
-    # Get host based metrics
-    for node in nodeList:
-        load, load_file = qConstructor.loadString(node)
-        memory, memory_file = qConstructor.memoryString(node)
-        interface, interface_file = qConstructor.interfaceString(node)
-        packet, packet_file = qConstructor.packetString(node)
-        nodeManager, nodeManager_file = qConstructor.nodeManagerString(node)
-        jvmNodeManager, jvmNodeManager_file = qConstructor.jvmnodeManagerString(node)
-
-
-
-        qload = qConstructor.systemLoadQuery(load, qgte, qlte, qsize, qinterval)
-        qmemory = qConstructor.systemMemoryQuery(memory, qgte, qlte, qsize, qinterval)
-        qinterface = qConstructor.systemInterfaceQuery(interface, qgte, qlte, qsize, qinterval)
-        qpacket = qConstructor.systemInterfaceQuery(packet, qgte, qlte, qsize, qinterval)
-        qnodeManager = qConstructor.yarnNodeManager(nodeManager, qgte, qlte, qsize, qinterval)
-        qjvmNodeManager = qConstructor.jvmNNquery(jvmNodeManager, qgte, qlte, qsize, qinterval)
-
-
-        # Execute query and convert response to csv
-        qloadResponse = dmonConnector.aggQuery(qload)
-        dformat.dict2csv(qloadResponse, qload, load_file)
-
-        gmemoryResponse = dmonConnector.aggQuery(qmemory)
-        #print gmemoryResponse
-        dformat.dict2csv(gmemoryResponse, qmemory, memory_file)
-
-        ginterfaceResponse = dmonConnector.aggQuery(qinterface)
-        dformat.dict2csv(ginterfaceResponse, qinterface, interface_file)
-
-        gpacketResponse = dmonConnector.aggQuery(qpacket)
-        dformat.dict2csv(gpacketResponse, qpacket, packet_file)
-
-        gnodeManagerResponse = dmonConnector.aggQuery(qnodeManager)
-        if gnodeManagerResponse['aggregations'].values()[0].values()[0]:
-            dformat.dict2csv(gnodeManagerResponse, qnodeManager, nodeManager_file)
-        else:
-            logger.info('[%s] : [INFO] Empty response from  %s no Node Manager detected!', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), node)
-
-
-
-        gjvmNodeManagerResponse = dmonConnector.aggQuery(qjvmNodeManager)
-        if gjvmNodeManagerResponse['aggregations'].values()[0].values()[0]:
-            dformat.dict2csv(gjvmNodeManagerResponse, qjvmNodeManager, jvmNodeManager_file)
-        else:
-            logger.info('[%s] : [INFO] Empty response from  %s no Node Manager detected!', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), node)
-
-
-    # Get non host based metrics
-    dfs, dfs_file = qConstructor.dfsFString()
-    dfsFs, dfsFs_file = qConstructor.dfsFString()
-    jvmNameNodeString, jvmNameNode_file = qConstructor.jvmNameNodeString()
-
-    qdfs = qConstructor.dfsQuery(dfs, qgte, qlte, qsize, qinterval)
-    qdfsFs = qConstructor.dfsFSQuery(dfsFs, qgte, qlte, qsize, qinterval)
-    qjvmNameNode = qConstructor.jvmNNquery(jvmNameNodeString, qgte, qlte, qsize, qinterval)
-
-    gdfs = dmonConnector.aggQuery(qdfs)
-    dformat.dict2csv(gdfs, qdfs, dfs_file)
-
-    gdfsFs = dmonConnector.aggQuery(qdfsFs)
-    dformat.dict2csv(gdfsFs, qdfsFs, dfsFs_file)
-
-    gjvmNameNode = dmonConnector.aggQuery(qjvmNameNode)
-    dformat.dict2csv(gjvmNameNode, qjvmNameNode, jvmNameNode_file)
-
-    #print testConnector.info()
-    #response = testConnector.aggQuery(query)
-    # logger.info('This is a test')
-    #response2 = testConnector.aggQuery(query2)
-    # dformat = DataFormatter(dataDir)
+    # nodeList = dmonConnector.getNodeList()
     #
-    # dformat.dict2csv(response, query, 'test2.csv')
-    # dformat.dict2csv(response2, query2, 'test22.csv')
+    # nodeProcess = {}
+    # nodeProcessM = {}
+    # for node in nodeList:
+    #     testS = qConstructor.jvmRedProcessString(node)
+    #     testS2 = qConstructor.jvmMapProcessingString(node)
+    #     qtest = qConstructor.queryByProcess(testS, qgte, qlte, 500, qinterval, wildCard=True, qtformat="epoch_millis",
+    #                         qmin_doc_count=1)
+    #     qtest2 = qConstructor.queryByProcess(testS2, qgte, qlte, 500, qinterval, wildCard=True, qtformat="epoch_millis",
+    #                                         qmin_doc_count=1)
+    #     test = dmonConnector.aggQuery(qtest)
+    #     test2 = dmonConnector.aggQuery(qtest2)
     #
-    # dformat.dict2arff('test2.csv', 'test2.arff')
+    #     #print test['hits']['hits']
+    #     unique = set()
+    #     for i in test['hits']['hits']:
+    #         #print i['_source']['ProcessName']
+    #         unique.add(i['_source']['ProcessName'])
+    #     nodeProcess[node] = list(unique)
+    #
+    #     unique2 = set()
+    #     for i in test2['hits']['hits']:
+    #         #print i['_source']['ProcessName']
+    #         unique2.add(i['_source']['ProcessName'])
+    #     nodeProcessM[node] = list(unique2)
+    #
+    #
+    # print nodeProcess
+    # for k, v in nodeProcess.iteritems():
+    #     if v:
+    #         for e in v:
+    #             test22, test22_file = qConstructor.jvmRedProcessbyNameString(k, e)
+    #             qtest = qConstructor.jvmNNquery(test22, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
+    #                                         qmin_doc_count=1)
+    #             test = dmonConnector.aggQuery(qtest)
+    #             print test
+    #             dformat.dict2csv(test, qtest, test22_file)
+    #     else:
+    #         pass
+    #
+    # print nodeProcessM
+    # for k, v in nodeProcessM.iteritems():
+    #     if v:
+    #         for e in v:
+    #             test21, test21_file = qConstructor.jvmMapProcessbyNameString(k, e)
+    #             qtest = qConstructor.jvmNNquery(test21, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
+    #                                         qmin_doc_count=1)
+    #             test = dmonConnector.aggQuery(qtest)
+    #             print test
+    #             dformat.dict2csv(test, qtest, test21_file)
+    #     else:
+    #         pass
 
-    #responseSystem = testConnector.aggQuery(systemRequest)
-    #print responseSystem
+    #testquery = {'query': {'filtered': {'filter': {'bool': {'must_not': [], 'must': [{'range': {'@timestamp': {'gte': 1477561800000, 'lte': 1477562100000, 'format': 'epoch_millis'}}}]}}, 'query': {'query_string': {'query': 'serviceMetrics:\"ShuffleMetrics\" AND serviceType:\"mapred\" AND hostname:\"dice.cdh.master\"', 'analyze_wildcard': True}}}}, 'aggs': {'2': {'date_histogram': {'field': '@timestamp', 'interval': '10s', 'time_zone': 'Europe/Helsinki', 'min_doc_count': 1, 'extended_bounds': {'max': 1477562100000, 'min': 1477561800000}}, 'aggs': {'1': {'avg': {'field': 'ShuffleConnections'}}, '3': {'avg': {'field': 'ShuffleOutputBytes'}}, '5': {'avg': {'field': 'ShuffleOutputsOK'}}, '4': {'avg': {'field': 'ShuffleOutputsFailed'}}}}}, 'size': 0}
+    sshuffle , t = qConstructor.shuffleString('dice.cdh.slave1')
+    qshuffle = qConstructor.shuffleQuery(sshuffle, qgte, qlte, qsize, qinterval)
 
+    testshuffle = dmonConnector.aggQuery(qshuffle)
 
-
-    #print type(response['aggregations'])
-    #print len(response)
-    #print response2
-    #print len(response2)
-
-
-
+    print testshuffle

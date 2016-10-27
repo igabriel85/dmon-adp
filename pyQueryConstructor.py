@@ -91,6 +91,30 @@ class QueryConstructor():
         file = 'FSOP.csv'
         return qstring, file
 
+    def shuffleString(self, host):
+        qstring = "serviceMetrics:\"ShuffleMetrics\" AND serviceType:\"mapred\" AND hostname:\"%s\"" % host
+        file = 'Shuffle_%s.csv' % host
+        return qstring, file
+
+    def jvmRedProcessString(self, host):
+        qstring = "type:\"reducetask-metrics\" AND serviceType:\"jvm\" AND hostname:\"%s\"" % host
+        return qstring
+
+    def jvmMapProcessingString(self, host):
+        qstring = "type:\"maptask-metrics\" AND serviceType:\"jvm\" AND hostname:\"%s\"" % host
+        return qstring
+
+    def jvmRedProcessbyNameString(self, host, process):
+        qstring = "type:\"reducetask-metrics\" AND serviceType:\"jvm\" AND hostname:\"%s\" AND ProcessName:\"%s\"" %(host, process)
+        file = 'JVM_ReduceTask_%s_%s.csv' %(host, process)
+        return qstring, file
+
+    def jvmMapProcessbyNameString(self, host, process):
+        qstring = "type:\"maptask-metrics\" AND serviceType:\"jvm\" AND hostname:\"%s\" AND ProcessName:\"%s\"" % (
+        host, process)
+        file = 'JVM_MapTasksTask_%s_%s.csv' % (host, process)
+        return qstring, file
+
     def loadAverage(self):  # TODO
         return "Average load across all nodes!"
 
@@ -324,7 +348,6 @@ class QueryConstructor():
         cqueryd = cquery.to_dict()
         return cqueryd
 
-
     def jvmNNquery(self, qstring, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
                             qmin_doc_count=1):
         cquery = Dict()
@@ -358,6 +381,49 @@ class QueryConstructor():
         cquery.aggs["13"].aggs["14"].avg.field = "GcNumWarnThresholdExceeded"
         cquery.aggs["13"].aggs["15"].avg.field = "GcNumInfoThresholdExceeded"
         cquery.aggs["13"].aggs["16"].avg.field = "GcTotalExtraSleepTime"
+        cquery.aggs["13"].aggs["17"].avg.field = "ThreadsNew"
+        cquery.aggs["13"].aggs["18"].avg.field = "ThreadsRunnable"
+        cquery.aggs["13"].aggs["19"].avg.field = "ThreadsBlocked"
+        cquery.aggs["13"].aggs["20"].avg.field = "ThreadsWaiting"
+        cquery.aggs["13"].aggs["21"].avg.field = "ThreadsTimedWaiting"
+        cquery.aggs["13"].aggs["22"].avg.field = "ThreadsTerminated"
+        cquery.aggs["13"].aggs["23"].avg.field = "LogError"
+        cquery.aggs["13"].aggs["24"].avg.field = "LogFatal"
+        cquery.aggs["13"].aggs["25"].avg.field = "LogWarn"
+        cquery.aggs["13"].aggs["26"].avg.field = "LogInfo"
+        cqueryd = cquery.to_dict()
+        return cqueryd
+
+    def jvmMRQuery(self, qstring, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
+                            qmin_doc_count=1):
+        cquery = Dict()
+        cquery.query.filtered.query.query_string.query = qstring
+        cquery.query.filtered.query.query_string.analyze_wildcard = wildCard
+        cquery.query.filtered.filter.bool.must = [
+            {"range": {"@timestamp": {"gte": qgte, "lte": qlte, "format": qtformat}}}]
+        cquery.query.filtered.filter.bool.must_not = []
+        cquery.size = qsize
+
+        cquery.aggs["13"].date_histogram.field = "@timestamp"
+        cquery.aggs["13"].date_histogram.interval = qinterval
+        cquery.aggs["13"].date_histogram.time_zone = "Europe/Helsinki"
+        cquery.aggs["13"].date_histogram.min_doc_count = qmin_doc_count
+        cquery.aggs["13"].date_histogram.extended_bounds.min = qgte
+        cquery.aggs["13"].date_histogram.extended_bounds.max = qlte
+
+        # NN JVM Metrics
+        cquery.aggs["13"].aggs["1"].avg.field = "MemNonHeapUsedM"
+        cquery.aggs["13"].aggs["2"].avg.field = "MemNonHeapCommittedM"
+        cquery.aggs["13"].aggs["3"].avg.field = "MemHeapUsedM"
+        cquery.aggs["13"].aggs["4"].avg.field = "MemHeapCommittedM"
+        cquery.aggs["13"].aggs["5"].avg.field = "MemHeapMaxM"
+        cquery.aggs["13"].aggs["6"].avg.field = "MemMaxM"
+        cquery.aggs["13"].aggs["7"].avg.field = "GcCountParNew"
+        cquery.aggs["13"].aggs["8"].avg.field = "GcTimeMillisParNew"
+        cquery.aggs["13"].aggs["9"].avg.field = "GcCountConcurrentMarkSweep"
+        cquery.aggs["13"].aggs["10"].avg.field = "GcTimeMillisConcurrentMarkSweep"
+        cquery.aggs["13"].aggs["11"].avg.field = "GcCount"
+        cquery.aggs["13"].aggs["12"].avg.field = "GcTimeMillis"
         cquery.aggs["13"].aggs["17"].avg.field = "ThreadsNew"
         cquery.aggs["13"].aggs["18"].avg.field = "ThreadsRunnable"
         cquery.aggs["13"].aggs["19"].avg.field = "ThreadsBlocked"
@@ -581,6 +647,56 @@ class QueryConstructor():
         cquery.aggs["2"].aggs["32"].avg.field = "PreemptCallAvgTime"
         cquery.aggs["2"].aggs["33"].avg.field = "PreemptCallStdevTime"
         cquery.aggs["2"].aggs["34"].avg.field = "PreemptCallINumOps"
+        cqueryd = cquery.to_dict()
+        return cqueryd
+
+    def shuffleQuery(self, qstring, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
+                            qmin_doc_count=1):
+        cquery = Dict()
+        cquery.query.filtered.query.query_string.query = qstring
+        cquery.query.filtered.query.query_string.analyze_wildcard = wildCard
+        cquery.query.filtered.filter.bool.must = [
+            {"range": {"@timestamp": {"gte": qgte, "lte": qlte, "format": qtformat}}}]
+        cquery.query.filtered.filter.bool.must_not = []
+        cquery.size = qsize
+
+        cquery.aggs["2"].date_histogram.field = "@timestamp"
+        cquery.aggs["2"].date_histogram.interval = qinterval
+        cquery.aggs["2"].date_histogram.time_zone = "Europe/Helsinki"
+        cquery.aggs["2"].date_histogram.min_doc_count = qmin_doc_count
+        cquery.aggs["2"].date_histogram.extended_bounds.min = qgte
+        cquery.aggs["2"].date_histogram.extended_bounds.max = qlte
+
+        #Shuffle metrics
+        cquery.aggs["2"].aggs["1"].avg.field = "ShuffleConnections"
+        cquery.aggs["2"].aggs["3"].avg.field = "ShuffleOutputBytes"
+        cquery.aggs["2"].aggs["4"].avg.field = "ShuffleOutputsFailed"
+        cquery.aggs["2"].aggs["5"].avg.field = "ShuffleOutputsOK"
+        cqueryd = cquery.to_dict()
+        return cqueryd
+
+    def queryByProcess(self, qstring, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
+                            qmin_doc_count=1):
+        cquery = Dict()
+        cquery.query.filtered.query.query_string.query = qstring
+        cquery.query.filtered.query.query_string.analyze_wildcard = wildCard
+        cquery.query.filtered.filter.bool.must = [
+            {"range": {"@timestamp": {"gte": qgte, "lte": qlte, "format": qtformat}}}]
+        cquery.query.filtered.filter.bool.must_not = []
+        cquery.size = qsize
+
+        cquery.aggs["2"].date_histogram.field = "@timestamp"
+        cquery.aggs["2"].date_histogram.interval = qinterval
+        cquery.aggs["2"].date_histogram.time_zone = "Europe/Helsinki"
+        cquery.aggs["2"].date_histogram.min_doc_count = qmin_doc_count
+        cquery.aggs["2"].date_histogram.extended_bounds.min = qgte
+        cquery.aggs["2"].date_histogram.extended_bounds.max = qlte
+
+        cquery.fields = ["*", "_source"]
+        cquery.script_fields = {}
+        cquery.fielddata_fields = ["@timestamp"]
+
+        cquery.sort = [{"@timestamp": {"order": "desc", "unmapped_type": "boolean"}}]
         cqueryd = cquery.to_dict()
         return cqueryd
 
