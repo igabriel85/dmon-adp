@@ -241,7 +241,26 @@ class DataFormatter():
             jvm.stop()
         logger.info('[%s] : [INFO] Finished conversion of %s to %s', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), dataIn, dataOut)
 
-    def normalize(self):
-        return "normalized dataset"
+    def normalize(self, dataFrame):
+        '''
+        :param dataFrame: dataframe to be normalized
+        :return: normalized data frame
+        '''
+        dataFrame_norm = (dataFrame -dataFrame.mean())/(dataFrame.max()-dataFrame.min())
+        return dataFrame_norm
 
-
+    def loadData(self, csvList=[]):
+        '''
+        :param csvList: list of CSVs
+        :return: list of data frames
+        '''
+        if csvList:
+            all_files = csvList
+        else:
+            all_files = glob.glob(os.path.join(self.dataDir, "*.csv"))
+        #df_from_each_file = (pd.read_csv(f) for f in all_files)
+        dfList = []
+        for f in all_files:
+            df = pd.read_csv(f)
+            dfList.append(df)
+        return dfList
