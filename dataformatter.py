@@ -95,6 +95,7 @@ class DataFormatter():
                 iterSlave[k] = v+str(i)
             current = current.merge(frame).rename(columns=iterSlave)
         #current.to_csv(mergedFile)
+        current.set_index('key', inplace=True)
         return current
 
     def df2csv(self, dataFrame, mergedFile):
@@ -147,6 +148,14 @@ class DataFormatter():
 
         logger.info('[%s] : [INFO] Sistem metrics merge complete',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+
+    def chainMergeYarn(self):
+        logger.info('[%s] : [INFO] Startig YARN metrics merge .......',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        # Read Yarn files
+        allJvmNodeManager = glob.glob(os.path.join(self.dataDir, "JVM_NM_*.csv"))
+        allNodeManager = glob.glob(os.path.join(self.dataDir, "NM_*.csv"))
+        allDataNode = glob.glob(os.path.join(self.dataDir, "DN_*.csv"))
 
     def dict2csv(self, response, query, filename):
         '''
