@@ -1,7 +1,7 @@
 import os
 
 
-def get_data_dir():
+def getDataDir():
     """
     Returns the data directory.
     :return: the data directory
@@ -12,7 +12,7 @@ def get_data_dir():
     return libdir
 
 
-def print_title(title):
+def printTitle(title):
     """
     Prints the title underlined.
     :param title: the title to print
@@ -23,7 +23,7 @@ def print_title(title):
     print("=" * len(title))
 
 
-def print_info(info):
+def printInfo(info):
     """
     Prints the info.
     :param info: the info to print

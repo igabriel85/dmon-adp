@@ -72,7 +72,6 @@ class DataFormatter():
     def chainMerge(self, lFiles, colNames, iterStart=1):
         '''
         :param lFiles: -> list of files to be opened
-        :param mergedFile: -> name of merged file
         :param colNames: -> dict with master column names
         :param iterStart: -> start of iteration default is 1
         :return: -> merged dataframe
@@ -95,6 +94,30 @@ class DataFormatter():
                 iterSlave[k] = v+str(i)
             current = current.merge(frame).rename(columns=iterSlave)
         #current.to_csv(mergedFile)
+        current.set_index('key', inplace=True)
+        return current
+
+    def chainMergeNR(self):
+        '''
+        :return: -> merged dataframe
+        '''
+
+        interface = os.path.join(self.dataDir, "Interface.csv")
+        memory = os.path.join(self.dataDir, "Memory.csv")
+        load = os.path.join(self.dataDir, "Load.csv")
+        packets = os.path.join(self.dataDir, "Packets.csv")
+
+        lFiles = [interface, memory, load, packets]
+
+        return self.listMerge(lFiles)
+
+    def listMerge(self, lFiles):
+        dfList = []
+        for f in lFiles:
+            df = pd.read_csv(f)
+            dfList.append(df)
+
+        current = reduce(lambda x, y: pd.merge(x, y, on='key'), dfList)
         current.set_index('key', inplace=True)
         return current
 

@@ -208,8 +208,12 @@ if __name__ == '__main__':
     dformat.dict2csv(gfsop, qfsop, fsop_file)
 
 
-    # Merge system Files
+    # Merge and rename by node system Files
     dformat.chainMergeSystem()
+
+    #Merge system metricsall
+    merged_df = dformat.chainMergeNR()
+    dformat.df2csv(merged_df, os.path.join(dataDir, "System.csv"))
 
     #print testConnector.info()
     #response = testConnector.aggQuery(query)

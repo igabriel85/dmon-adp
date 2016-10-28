@@ -14,13 +14,14 @@ def main():
     Run sample code.
     """
 
-    print(helper.get_data_dir())
+    print(helper.getDataDir())
 
     # cross-validation + classification
-    helper.print_title("Experiment: Cross-validation + classification")
-    datasets = [helper.get_data_dir() + os.sep + "iris.arff", helper.get_data_dir() + os.sep + "anneal.arff"]
+    helper.printTitle("Experiment: Cross-validation + classification")
+    datasets = [helper.getDataDir() + os.sep + "iris.arff", helper.getDataDir() + os.sep + "anneal.arff"]
     classifiers = [Classifier("weka.classifiers.rules.ZeroR"), Classifier("weka.classifiers.trees.J48")]
     outfile = tempfile.gettempdir() + os.sep + "results-cv.arff"
+
     exp = SimpleCrossValidationExperiment(
         classification=True,
         runs=10,
@@ -43,8 +44,8 @@ def main():
     print(tester.multi_resultset_full(0, comparison_col))
 
     # random split + regression
-    helper.print_title("Experiment: Random split + regression")
-    datasets = [helper.get_data_dir() + os.sep + "bolts.arff", helper.get_data_dir() + os.sep + "bodyfat.arff"]
+    helper.printTitle("Experiment: Random split + regression")
+    datasets = [helper.getDataDir() + os.sep + "bolts.arff", helper.getDataDir() + os.sep + "bodyfat.arff"]
     classifiers = [
         Classifier("weka.classifiers.rules.ZeroR"),
         Classifier("weka.classifiers.functions.LinearRegression")
