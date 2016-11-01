@@ -29,8 +29,6 @@ from dataformatter import DataFormatter
 from pyQueryConstructor import QueryConstructor
 
 
-
-
 class Connector():
     def __init__(self, esEndpoint, dmonPort=5001, esInstanceEndpoint=9200, index="logstash-*"):
         self.esInstance = Elasticsearch(esEndpoint)

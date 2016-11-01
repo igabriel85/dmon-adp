@@ -20,6 +20,11 @@ from weka.core.converters import Loader, Saver
 
 
 def convertCsvtoArff(indata, outdata):
+    '''
+    :param indata: -> input csv file
+    :param outdata: -> output file
+    :return:
+    '''
     loader = Loader(classname="weka.core.converters.CSVLoader")
     data = loader.load_file(indata)
     saver = Saver(classname="weka.core.converters.ArffSaver")
