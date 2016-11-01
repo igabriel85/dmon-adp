@@ -37,8 +37,20 @@ class DataFormatter():
     def getJson(self):
         return 'load Json'
 
-    def filter(self):
-        return 'filter dataset'
+    def filterColumns(self, df, lColumns):
+        '''
+        :param df: -> dataframe
+        :param lColumns: -> column names
+        :return: -> filtered df
+        '''
+        if not isinstance(lColumns, list):
+            logger.error('[%s] : [ERROR] Dataformatter filter method expects list of column names not %s',
+                                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(lColumns))
+            sys.exit(1)
+        return df[lColumns]
+
+    def filterRows(self):
+        return "Filtered rows"
 
     def merge(self, csvOne, csvTwo, merged):
         '''
