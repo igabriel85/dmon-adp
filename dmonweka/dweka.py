@@ -6,9 +6,10 @@ import weka.core.jvm as jvm
 
 
 class dweka:
-    def __init__(self, wHeap='512m'):
+    def __init__(self, wHeap = '512m'):
         self.wHeap = wHeap
         self.dataDir = os.path.join(os.path.dirname(os.path.abspath('')), 'data')
+        self.modelDir = os.path.join(os.path.dirname(os.path.abspath('')), 'models')
 
     def loadData(self, fName):
         data = converters.load_any_file(os.path.join(self.dataDir, fName))
