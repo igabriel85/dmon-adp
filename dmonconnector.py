@@ -29,7 +29,7 @@ from dataformatter import DataFormatter
 from pyQueryConstructor import QueryConstructor
 
 
-class Connector():
+class Connector:
     def __init__(self, esEndpoint, dmonPort=5001, esInstanceEndpoint=9200, index="logstash-*"):
         self.esInstance = Elasticsearch(esEndpoint)
         self.esEndpoint = esEndpoint
@@ -98,8 +98,59 @@ class Connector():
         rData = rRoles.json()
         return rData
 
-    def pushAnomaly(self):
-        return "push andomaly"
+    def createIndex(self, indexName):
+        self.esInstance.create(index=indexName, ignore=400)
+        logger.info('[%s] : [INFO] Created index %s',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), indexName)
+
+    def closeIndex(self, indexName):
+        self.esInstance.close(index=indexName)
+        logger.info('[%s] : [INFO] Closed index %s',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), indexName)
+
+    def deleteIndex(self, indexName):
+        res = self.esInstance.delete(index=indexName, ignore=[400, 404])
+        logger.info('[%s] : [INFO] Deleted index %s',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), indexName)
+        return res
+
+    def openIndex(self, indexName):
+        res = self.esInstance.indices.open(index=indexName)
+        logger.info('[%s] : [INFO] Open index %s',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), indexName)
+        return res
+
+    def getIndex(self, indexName):
+        res = self.esInstance.indices.get(index=indexName, human=True)
+        return res
+
+    def getIndexSettings(self, indexName):
+        res = self.esInstance.indices.get_settings(index=indexName, human=True)
+        return res
+
+    def clusterHealth(self):
+        res = self.esInstance.cluster.health(request_timeout=15)
+        return res
+
+    def clusterSettings(self):
+        res = self.esInstance.cluster.get_settings(request_timeout=15)
+        return res
+
+    def clusterState(self):
+        res = self.esInstance.cluster.stats(human=True, request_timeout=15)
+        return res
+
+    def nodeInfo(self):
+        res = self.esInstance.nodes.info(request_timeout=15)
+        return res
+
+    def nodeState(self):
+        res = self.esInstance.nodes.stats(request_timeout=15)
+        return res
+
+    def pushAnomaly(self, anomalyIndex, doc_type, body):
+        res = self.esInstance.index(index=anomalyIndex, doc_type=doc_type, body=body)
+        return res
 
     def getModel(self):
         return "getModel"
@@ -167,64 +218,27 @@ if __name__ == '__main__':
     qConstructor = QueryConstructor()
     dformat = DataFormatter(dataDir)
 
-    # nodeList = dmonConnector.getNodeList()
-    #
-    # nodeProcess = {}
-    # nodeProcessM = {}
-    # for node in nodeList:
-    #     testS = qConstructor.jvmRedProcessString(node)
-    #     testS2 = qConstructor.jvmMapProcessingString(node)
-    #     qtest = qConstructor.queryByProcess(testS, qgte, qlte, 500, qinterval, wildCard=True, qtformat="epoch_millis",
-    #                         qmin_doc_count=1)
-    #     qtest2 = qConstructor.queryByProcess(testS2, qgte, qlte, 500, qinterval, wildCard=True, qtformat="epoch_millis",
-    #                                         qmin_doc_count=1)
-    #     test = dmonConnector.aggQuery(qtest)
-    #     test2 = dmonConnector.aggQuery(qtest2)
-    #
-    #     #print test['hits']['hits']
-    #     unique = set()
-    #     for i in test['hits']['hits']:
-    #         #print i['_source']['ProcessName']
-    #         unique.add(i['_source']['ProcessName'])
-    #     nodeProcess[node] = list(unique)
-    #
-    #     unique2 = set()
-    #     for i in test2['hits']['hits']:
-    #         #print i['_source']['ProcessName']
-    #         unique2.add(i['_source']['ProcessName'])
-    #     nodeProcessM[node] = list(unique2)
-    #
-    #
-    # print nodeProcess
-    # for k, v in nodeProcess.iteritems():
-    #     if v:
-    #         for e in v:
-    #             test22, test22_file = qConstructor.jvmRedProcessbyNameString(k, e)
-    #             qtest = qConstructor.jvmNNquery(test22, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
-    #                                         qmin_doc_count=1)
-    #             test = dmonConnector.aggQuery(qtest)
-    #             print test
-    #             dformat.dict2csv(test, qtest, test22_file)
-    #     else:
-    #         pass
-    #
-    # print nodeProcessM
-    # for k, v in nodeProcessM.iteritems():
-    #     if v:
-    #         for e in v:
-    #             test21, test21_file = qConstructor.jvmMapProcessbyNameString(k, e)
-    #             qtest = qConstructor.jvmNNquery(test21, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
-    #                                         qmin_doc_count=1)
-    #             test = dmonConnector.aggQuery(qtest)
-    #             print test
-    #             dformat.dict2csv(test, qtest, test21_file)
-    #     else:
-    #         pass
+    test = dmonConnector.clusterHealth()
+    test2 = dmonConnector.clusterSettings()
+    test3 = dmonConnector.clusterState()
+    test4 = dmonConnector.nodeInfo()
+    test5 = dmonConnector.nodeState()
+    test6 = dmonConnector.getIndex('logstash-*')
+    test7 = dmonConnector.getIndexSettings('logstash-*')
 
-    #testquery = {'query': {'filtered': {'filter': {'bool': {'must_not': [], 'must': [{'range': {'@timestamp': {'gte': 1477561800000, 'lte': 1477562100000, 'format': 'epoch_millis'}}}]}}, 'query': {'query_string': {'query': 'serviceMetrics:\"ShuffleMetrics\" AND serviceType:\"mapred\" AND hostname:\"dice.cdh.master\"', 'analyze_wildcard': True}}}}, 'aggs': {'2': {'date_histogram': {'field': '@timestamp', 'interval': '10s', 'time_zone': 'Europe/Helsinki', 'min_doc_count': 1, 'extended_bounds': {'max': 1477562100000, 'min': 1477561800000}}, 'aggs': {'1': {'avg': {'field': 'ShuffleConnections'}}, '3': {'avg': {'field': 'ShuffleOutputBytes'}}, '5': {'avg': {'field': 'ShuffleOutputsOK'}}, '4': {'avg': {'field': 'ShuffleOutputsFailed'}}}}}, 'size': 0}
-    sshuffle , t = qConstructor.shuffleString('dice.cdh.slave1')
-    qshuffle = qConstructor.shuffleQuery(sshuffle, qgte, qlte, qsize, qinterval)
+    body = {
+            'timestamp': datetime.utcnow(),
+            'anomaly': 'complex',
+            'host': '10.0.0.0'
+        }
 
-    testshuffle = dmonConnector.aggQuery(qshuffle)
+    test8 = dmonConnector.pushAnomaly('testme', doc_type='d', body=body)
 
-    print testshuffle
+    print test
+    print test2
+    print test3
+    print test4
+    print test5
+    print test6
+    print test7
+    print test8
