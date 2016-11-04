@@ -122,7 +122,7 @@ class AdpEngine:
                 print "System Metrics merge complete"
             else:
                 print "Only for all system metrics available" #todo for metrics types
-        elif 'yarn' in queryd:
+        if 'yarn' in queryd:
             print "Starting query for yarn metrics"
             if queryd['yarn'] == 0:
                 # per slave unique process name list
@@ -273,17 +273,17 @@ class AdpEngine:
                 for el in queryd['yarn']:
                     if el == 'cluster':
                         self.getCluster()
-                    elif el == 'nn':
+                    if el == 'nn':
                         self.getNameNode()
-                    elif el == 'nm':
+                    if el == 'nm':
                         self.getNodeManager(desNodes)
-                    elif el == 'dfs':
+                    if el == 'dfs':
                         self.getDFS()
-                    elif el == 'dn':
+                    if el == 'dn':
                         self.getDataNode(desNodes)
-                    elif el =='mr':
+                    if el =='mr':
                         self.getMapnReduce(desNodes)
-                    else:
+                    if el not in ['cluster', 'nn', 'nm', 'dfs', 'dn', 'mr']:
                         logger.error('[%s] : [ERROR] Unknown metrics context %s',
                                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), el)
                         sys.exit(1)
@@ -485,8 +485,8 @@ class AdpEngine:
                 logger.info('[%s] : [INFO] No map process for host  %s found',
                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), host)
                 pass
-            print "Querying  Mapper metrics complete"
-            logger.info('[%s] : [INFO] Querying  Mapper metrics complete',
+        print "Querying  Mapper metrics complete"
+        logger.info('[%s] : [INFO] Querying  Mapper metrics complete',
                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
 
     def getDataNode(self, nodes):
