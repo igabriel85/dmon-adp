@@ -29,3 +29,49 @@ def convertCsvtoArff(indata, outdata):
     data = loader.load_file(indata)
     saver = Saver(classname="weka.core.converters.ArffSaver")
     saver.save_file(data, outdata)
+
+
+def queryParser(query):
+    '''
+    :param query: -> query of the form  {"Query": "yarn:resourcemanager, clustre, jvm_NM;system"}
+    :return: -> dictionary of the form {'system': 0, 'yarn': ['resourcemanager', 'clustre', 'jvm_NM']}
+    '''
+    type = {}
+    for r in query.split(';'):
+        if r.split(':')[0] == 'yarn':
+            try:
+                type['yarn'] = r.split(':')[1].split(', ')
+            except:
+                type['yarn'] = 0
+        if r.split(':')[0] == 'spark':
+            try:
+                type['spark'] = r.split(':')[1].split(', ')
+            except:
+                type['spark'] = 0
+        if r.split(':')[0] == 'storm':
+            try:
+                type['storm'] = r.split(':')[1].split(', ')
+            except:
+                type['storm'] = 0
+        if r.split(':')[0] == 'system':
+            try:
+                type['system'] = r.split(':')[1].split(', ')
+            except:
+                type['system'] = 0
+    return type
+
+
+def nodesParse(nodes):
+    if not nodes:
+        return 0
+    return nodes.split(';')
+
+
+
+# query = "yarn:resourcemanager, clustre, jvm_NM;system"
+# query2 = {"Query": "yarn;system;spark"}
+# test = queryParser(query)
+# print test
+# print queryParser(query2)
+
+

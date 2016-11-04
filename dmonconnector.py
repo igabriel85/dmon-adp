@@ -201,6 +201,19 @@ class Connector:
                 nodes.append(k)
         return nodes
 
+    def getDmonStatus(self):
+        nUrl = "http://%s:%s/dmon/v1/overlord/core/status" % (self.esEndpoint, self.dmonPort)
+        logger.info('[%s] : [INFO] dmon get core status url -> %s',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), nUrl)
+        try:
+            rdmonStatus = requests.get(nUrl)
+        except Exception as inst:
+            logger.error('[%s] : [ERROR] Exception has occured while connecting to dmon with type %s at arguments %s',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+            print "Can't connect to dmon at %s port %s" % (self.esEndpoint, self.dmonPort)
+            sys.exit(2)
+        return rdmonStatus.json()
+
 
 if __name__ == '__main__':
     dataDir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')

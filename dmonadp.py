@@ -22,10 +22,14 @@ from dmonconnector import Connector
 from adpconfig import readConf
 from adplogger import logger
 from datetime import datetime
+from adpengine import dmonadpengine
 import time
 
 
 def main(argv):
+    dataDir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+    modelsDir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
+
     settings = {
         "esendpoint": None,
         "esInstanceEndpoint": 9200,
@@ -34,6 +38,7 @@ def main(argv):
         "from": None, # timestamp
         "to": None, # timestamp
         "query": None,
+        "nodes": None,
         "qsize": None,
         "qinterval": None,
         "train": None, # Bool default None
@@ -171,6 +176,24 @@ def main(argv):
         print "Query -> %s" % settings['query']
         logger.info('[%s] : [INFO] Query set to %s',
                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['query'])
+
+    if settings["nodes"] is None:
+        try:
+            if not readCnf['Connector']['nodes']:
+                readCnf['Connector']['nodes'] = 0
+            print "Desired Nodes -> %s" % readCnf['Connector']['nodes']
+            settings["nodes"] = readCnf['Connector']['nodes']
+            logger.info('[%s] : [INFO] Desired nodes set to %s',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'),
+                    settings['nodes'])
+        except:
+            logger.warning('[%s] : [WARN] No nodes selected from config file or comandline querying all',
+                           datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+            settings["nodes"] = 0
+    else:
+        print "Desired Nodes -> %s" % settings["nodes"]
+        logger.info('[%s] : [INFO] Desired nodes set to %s',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings["nodes"])
 
     if settings["qsize"] is None:
         try:
@@ -364,6 +387,12 @@ def main(argv):
     #print dmonC
     print "Conf file -> %s" %readCnf
     print "Settings  -> %s" %settings
+
+    engine = dmonadpengine.AdpEngine(settings, dataDir=dataDir, modelsDir=modelsDir)
+    engine.initConnector()
+    engine.getData()
+
+
     print "#" * 100
 
 
