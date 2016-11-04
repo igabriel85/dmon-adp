@@ -295,8 +295,13 @@ class AdpEngine:
 
         return queryd
 
-    def runmethod(self):
-        return "select and run methods"
+    def trainMethod(self):
+        # use threads
+        return "train method/s"
+
+    def runMethod(self):
+        # use threads
+        return "select and run methods for a given time interval until adp exits"
 
     def loadModel(self):
         return "model"
