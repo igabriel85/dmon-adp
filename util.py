@@ -81,6 +81,12 @@ def getModelList():
 
 
 def csvheaders2colNames(csvfile, adname, df=False):
+    '''
+    :param csvfile: -> input csv or dataframe
+    :param adname: -> string to add to column names
+    :param df: -> if set to false csvfile is used if not df is used
+    :return:
+    '''
     colNames = {}
     if not df:
         with open(csvfile, 'rb') as f:
@@ -100,6 +106,20 @@ def csvheaders2colNames(csvfile, adname, df=False):
                 colNames[e] = '%s_%s' % (e, adname)
     return colNames
 
+
+def str2Bool(st):
+    '''
+    :param st: -> string to test
+    :return: -> if true then returns 1 else 0
+    '''
+    if st in ['True', 'true', '1']:
+        return 1
+    elif st in ['False', 'false', '0']:
+        return 0
+    else:
+        return 0
+
+
 # testcsv = "/Users/Gabriel/Documents/workspaces/diceWorkspace/dmon-adp/data/JVM_NM_dice.cdh.slave1.csv"
 #
 # print csvheaders2colNames(testcsv, 'slave1')
@@ -113,5 +133,6 @@ def csvheaders2colNames(csvfile, adname, df=False):
 # test = queryParser(query)
 # print test
 # print queryParser(query2)
+
 
 

@@ -1,6 +1,6 @@
 import os
 from dmonconnector import *
-from util import queryParser, nodesParse
+from util import queryParser, nodesParse, str2Bool
 
 
 class AdpEngine:
@@ -315,7 +315,7 @@ class AdpEngine:
 
     def trainMethod(self):
         # use threads
-        if self.train:
+        if str2Bool(self.train):
             if self.type == 'clustering':
                 if self.method in self.allowedMethodsClustering:
                     print "Training with selected method %s of type %s" % (self.method, self.type)
@@ -342,7 +342,7 @@ class AdpEngine:
             return 0
 
     def detectAnomalies(self):
-        if self.detect:
+        if str2Bool(self.detect):
             if self.type == 'clustering':
                 if self.method in self.allowedMethodsClustering:
                     print "Detecting with selected method %s of type %s" % (self.method, self.type)
@@ -626,6 +626,7 @@ class AdpEngine:
     def printTest(self):
         print "Endpoint -> %s" %self.esendpoint
         print "Method settings -> %s" %self.methodSettings
+        print "Train -> %s"  % type(self.train)
 
 
 
