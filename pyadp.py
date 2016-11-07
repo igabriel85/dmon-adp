@@ -162,7 +162,7 @@ if __name__ == '__main__':
             pass
 
     # Get non host based metrics queries and file strings
-    dfs, dfs_file = qConstructor.dfsFString()
+    dfs, dfs_file = qConstructor.dfsString()
     dfsFs, dfsFs_file = qConstructor.dfsFString()
     jvmNameNodeString, jvmNameNode_file = qConstructor.jvmNameNodeString()
     queue, queue_file = qConstructor.queueResourceString()

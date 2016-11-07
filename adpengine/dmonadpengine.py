@@ -218,7 +218,7 @@ class AdpEngine:
                         pass
 
                         # Get non host based metrics queries and file strings
-                dfs, dfs_file = self.qConstructor.dfsFString()
+                dfs, dfs_file = self.qConstructor.dfsString()
                 dfsFs, dfsFs_file = self.qConstructor.dfsFString()
                 jvmNameNodeString, jvmNameNode_file = self.qConstructor.jvmNameNodeString()
                 queue, queue_file = self.qConstructor.queueResourceString()
@@ -314,7 +314,7 @@ class AdpEngine:
         print "Querying DFS metrics"
         logger.info('[%s] : [INFO] Querying DFS metrics...',
                                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
-        dfs, dfs_file = self.qConstructor.dfsFString()
+        dfs, dfs_file = self.qConstructor.dfsString()
         dfsFs, dfsFs_file = self.qConstructor.dfsFString()
         fsop, fsop_file = self.qConstructor.fsopDurationsString()
 
