@@ -1,8 +1,12 @@
 import os
 from weka.clusterers import Clusterer
 import weka.core.converters as converters
+import weka.core.serialization as serialization
 import traceback
 import weka.core.jvm as jvm
+from adplogger import logger
+from datetime import datetime
+import time
 
 
 class dweka:
@@ -15,7 +19,23 @@ class dweka:
         data = converters.load_any_file(os.path.join(self.dataDir, fName))
         return data
 
-    def simpleKMeans(self, dataf, options):
+    def saveModel(self, model, mname):
+        finalname = "%s.model" %mname
+        serialization.write(os.path.join(self.modelDir, finalname), model)
+        logger.info('[%s] : [INFO] Saved mode %s ',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), finalname)
+
+    def loadClusterModel(self, mname):
+        finalname = "%s.model" %mname
+        cluster = Clusterer(jobject=serialization.read(os.path.join(self.modelDir, finalname)))
+        logger.info('[%s] : [INFO] Loaded clusterer mode %s ',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), finalname)
+        return cluster
+
+    def runclustermodel(self):
+        return 0
+
+    def simpleKMeansTrain(self, dataf, options):
         '''
         :param data: -> data to be clustered
         :param options: -> SimpleKMeans options
@@ -38,12 +58,13 @@ class dweka:
                 cl = clusterer.cluster_instance(inst)  # 0-based cluster index
                 dist = clusterer.distribution_for_instance(inst)  # cluster membership distribution
                 print("cluster=" + str(cl) + ", distribution=" + str(dist))
+            self.saveModel(clusterer, 'skm')
         except Exception, e:
             print(traceback.format_exc())
         finally:
             jvm.stop()
 
-    def dbscan(self, dataf, options):
+    def dbscanTrain(self, dataf, options):
         '''
         :param data: -> data to be clustered
         :param options: -> SimpleKMeans options
@@ -61,14 +82,14 @@ class dweka:
             clusterDBSCAN = Clusterer(classname="weka.clusterers.DBSCAN", options=options)
             clusterDBSCAN.build_clusterer(data)
             print clusterDBSCAN
-            print type(clusterDBSCAN)
+            self.saveModel(clusterDBSCAN, 'dbscan')
             # cluster the data
         except Exception, e:
             print(traceback.format_exc())
         finally:
             jvm.stop()
 
-    def em(self, dataf, options):
+    def emTrain(self, dataf, options):
         '''
         :param data: -> data to be clustered
         :param options: -> EM options
@@ -88,6 +109,7 @@ class dweka:
                               options=options)
             clusterEM.build_clusterer(data)
             print clusterEM
+            self.saveModel(clusterEM, 'em')
         except Exception, e:
             print(traceback.format_exc())
         finally:
