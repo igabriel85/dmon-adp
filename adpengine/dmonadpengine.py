@@ -1,7 +1,6 @@
 import os
 from dmonconnector import *
 from util import queryParser, nodesParse
-settings = {'load': '<model_name>', 'qsize': 'qs', 'export': '<model_name>', 'file': None, 'query': 'yarn:resourcemanager, clustre, jvm_NM;system', 'index': 'logstash-*', 'detect': False, 'from': '1444444444', 'to': '1455555555', 'sload': 'load_threashold', 'nodes': 0, 'method': 'method_name', 'snetwork': 'net_threashold', 'train': True, 'esInstanceEndpoint': 9200, 'validate': False, 'model': '<model_name>', 'qinterval': '10s', 'dmonPort': 5001, 'esendpoint': '85.120.206.27', 'smemory': 'mem_threashold', 'MethodSettings': {'set1': 'none', 'set2': 'none', 'set3': 'none'}}
 
 
 class AdpEngine:
@@ -17,7 +16,7 @@ class AdpEngine:
         self.nodes = nodesParse(settingsDict['nodes'])
         self.qinterval = settingsDict['qinterval']
         self.train = settingsDict['train']
-        self.model = settingsDict['model']
+        self.type = settingsDict['type']
         self.load = settingsDict['load']
         self.method = settingsDict['method']
         self.validate = settingsDict['validate']

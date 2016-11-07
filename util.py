@@ -17,6 +17,13 @@ limitations under the License.
 """
 
 from weka.core.converters import Loader, Saver
+from os import listdir
+from os.path import isfile, join
+import os
+import csv
+
+
+modelDir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
 
 
 def convertCsvtoArff(indata, outdata):
@@ -67,7 +74,36 @@ def nodesParse(nodes):
     return nodes.split(';')
 
 
+def getModelList():
+    onlyfiles = [f for f in listdir(modelDir) if isfile(join(modelDir, f))]
+    return onlyfiles
 
+
+def csvheaders2colNames(csvfile, adname):
+    with open(csvfile, 'rb') as f:
+        reader = csv.reader(f)
+        i = reader.next()
+    i.pop
+    colNames = {}
+    for e in i:
+        if e == 'key':
+            pass
+        else:
+            colNames[e] = '%s_%s' %(e, adname)
+    return colNames
+
+
+
+
+
+# testcsv = "/Users/Gabriel/Documents/workspaces/diceWorkspace/dmon-adp/data/JVM_NM_dice.cdh.slave1.csv"
+#
+# print csvheaders2colNames(testcsv, 'slave1')
+
+
+
+
+# print getModelList()
 # query = "yarn:resourcemanager, clustre, jvm_NM;system"
 # query2 = {"Query": "yarn;system;spark"}
 # test = queryParser(query)
