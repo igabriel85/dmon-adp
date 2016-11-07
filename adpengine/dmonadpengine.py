@@ -386,8 +386,11 @@ class AdpEngine:
         saveName = "%s_%s.model" %(methodname, modelName)
         return saveName
 
-    def loadModel(self):
+    def pushModel(self):
         return "model"
+
+    def compateModel(self):
+        return "Compare models"
 
     def reportAnomaly(self):
         return "anomaly"

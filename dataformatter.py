@@ -49,8 +49,36 @@ class DataFormatter():
             sys.exit(1)
         return df[lColumns]
 
-    def filterRows(self, df):
-        return df.ix
+    def filterRows(self, df, ld, gd=0):
+        '''
+        :param df: -> dataframe
+        :param ld: -> less then key based timeframe in utc
+        :param gd: -> greter then key based timeframe in utc
+        :return: -> new filtered dataframe
+        '''
+        if gd:
+            df = df[df.key > gd]
+            return df[df.key < ld]
+        else:
+            return df[df.key < ld]
+
+        # new_df = df_drop[df.key > 1477562060000]
+        # print new_df
+        # final_df = new_df[df.key < 1477562090000]
+        # print final_df
+
+    def dropColumns(self, df, lColumns, cp=True):
+        '''
+        :param df: dataframe
+        :param lColumns: filtere clolumns
+        :param cp: create new df
+        inplace true means the slected df will be modified
+        '''
+        if cp:
+            df.drop(lColumns, axis=1)
+            return 0
+        else:
+            return df.drop(lColumns,axis=1, inplace=True)
 
     def merge(self, csvOne, csvTwo, merged):
         '''
