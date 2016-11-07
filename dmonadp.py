@@ -49,6 +49,9 @@ def main(argv):
         "validate": None, # Bool default None
         "export": None,
         "detect": None, # Bool default None
+        "cfilter": None,
+        "rfilter": None,
+        "dfilter": None,
         "sload": None,
         "smemory": None,
         "snetwork": None,
@@ -389,6 +392,32 @@ def main(argv):
         logger.info('[%s] : [INFO] Heap size set to default %s',
                 datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['heap'])
 
+    try:
+        print "Filter columns -> %s" %readCnf['Filter']['columns']
+        settings["cfilter"] = readCnf['Filter']['columns']
+    except:
+        print "Filter columns -> %s" %settings["cfilter"]
+    finally:
+        logger.info('[%s] : [INFO] Filter column set to %s',
+                datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['cfilter'])
+
+    try:
+        print "Filter rows -> %s" %readCnf['Filter']['rows']
+        settings["rfilter"] = readCnf['Filter']['rows']
+    except:
+        print "Filter rows -> %s" %settings["rfilter"]
+    finally:
+        logger.info('[%s] : [INFO] Filter rows set to %s',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['rfilter'])
+
+    try:
+        print "Filter drop columns -> %s" % readCnf['Filter']['DColumns']
+        settings["dfilter"] = readCnf['Filter']['DColumns']
+    except:
+        print "Filter drop columns -> %s" % settings["dfilter"]
+    finally:
+        logger.info('[%s] : [INFO] Filter drop column set to %s',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['dfilter'])
     #if settings["esendpoint"] == None:
 
     #dmonC = Connector('85.120.206.27')

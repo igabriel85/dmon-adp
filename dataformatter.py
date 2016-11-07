@@ -133,7 +133,7 @@ class DataFormatter:
         # Get first df and set as master
         current = dfList[0].rename(columns=colNames)
         for i, frame in enumerate(dfList[1:], iterStart):
-            iterSlave ={}
+            iterSlave = {}
             for k, v in slaveCol.iteritems():
                 iterSlave[k] = v+str(i)
             current = current.merge(frame).rename(columns=iterSlave)

@@ -34,7 +34,7 @@ class AdpEngine:
         self.dformat = DataFormatter(self.dataDir)
         self.regnodeList = []
         self.allowedMethodsClustering = ['skm', 'em', 'dbscan']
-        self.allowefMethodsClassification = []
+        self.allowefMethodsClassification = []  # TODO
         self.heap = settingsDict['heap']
 
     def initConnector(self):
@@ -389,7 +389,7 @@ class AdpEngine:
     def pushModel(self):
         return "model"
 
-    def compateModel(self):
+    def compareModel(self):
         return "Compare models"
 
     def reportAnomaly(self):
