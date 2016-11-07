@@ -277,11 +277,12 @@ class DataFormatter():
         allNodeManager = glob.glob(os.path.join(self.dataDir, "NM_*.csv"))
         allDataNode = glob.glob(os.path.join(self.dataDir, "DN_*.csv"))
 
-    def dict2csv(self, response, query, filename):
+    def dict2csv(self, response, query, filename, df=False):
         '''
         :param response: elasticsearch response
         :param query: elasticserch query
         :param filename: name of file
+        :param df: if set to true method returns dataframe and doesn't save to file.
         :return:
         '''
         requiredMetrics = []
@@ -317,7 +318,6 @@ class DataFormatter():
                             dictMetrics[rKey] = rValue['value']
                     requiredMetrics.append(dictMetrics)
         # print "Required Metrics -> %s" % requiredMetrics
-
         csvOut = os.path.join(self.dataDir, filename)
         cheaders = []
         if query['aggs'].values()[0].values()[1].values()[0].values()[0].values()[0] == "type_instance.raw":
@@ -343,19 +343,25 @@ class DataFormatter():
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(kvImp))
         logger.info('[%s] : [INFO] Headers detected %s',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(cheaders))
-
-        try:
-            with open(csvOut, 'wb') as csvfile:
-                w = csv.DictWriter(csvfile, cheaders)
-                w.writeheader()
-                for metrics in requiredMetrics:
-                    w.writerow(metrics)
-            csvfile.close()
-        except EnvironmentError:
-            logger.error('[%s] : [ERROR] File %s could not be created', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), csvOut)
-            sys.exit(1)
-        logger.info('[%s] : [INFO] Finished csv %s',
+        if not df:
+            try:
+                with open(csvOut, 'wb') as csvfile:
+                    w = csv.DictWriter(csvfile, cheaders)
+                    w.writeheader()
+                    for metrics in requiredMetrics:
+                        w.writerow(metrics)
+                csvfile.close()
+            except EnvironmentError:
+                logger.error('[%s] : [ERROR] File %s could not be created', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), csvOut)
+                sys.exit(1)
+            logger.info('[%s] : [INFO] Finished csv %s',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), filename)
+        else:
+            df = pd.DataFrame(requiredMetrics)
+            df.set_index('key', inplace=True)
+            logger.info('[%s] : [INFO] Created dataframe  %s',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+            return df
 
     def dict2arff(self, fileIn, fileOut):
         dataIn = os.path.join(self.dataDir, fileIn)
