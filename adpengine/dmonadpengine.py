@@ -33,6 +33,9 @@ class AdpEngine:
         self.qConstructor = QueryConstructor()
         self.dformat = DataFormatter(self.dataDir)
         self.regnodeList = []
+        self.allowedMethodsClustering = ['skm', 'em', 'dbscan']
+        self.allowefMethodsClassification = []
+        self.heap = settingsDict['heap']
 
     def initConnector(self):
         print "Establishing connection with dmon ....."
@@ -262,10 +265,23 @@ class AdpEngine:
 
                 gfsop = self.dmonConnector.aggQuery(qfsop)
                 self.dformat.dict2csv(gfsop, qfsop, fsop_file)
+
                 print "Query for yarn metrics complete starting merge..."
+                merged_DFS = self.dformat.chainMergeDFS()
+                self.dformat.df2csv(merged_DFS, os.path.join(self.dataDir, 'DFS_Merged.csv'))
 
-                #todo
+                merged_cluster = self.dformat.chainMergeCluster()
+                self.dformat.df2csv(merged_cluster, os.path.join(self.dataDir, 'Cluster_Merged.csv'))
 
+                nm_merged, jvmnn_merged = self.dformat.chainMergeNM()
+                self.dformat.df2csv(nm_merged, os.path.join(self.dataDir, 'NM_Merged.csv'))
+                self.dformat.df2csv(jvmnn_merged, os.path.join(self.dataDir, 'JVM_NM_Merged.csv'))
+
+                dn_merged = self.dformat.chainMergeDN()
+                self.dformat.df2csv(dn_merged, os.path.join(self.dataDir, 'DN_Merged.csv'))
+
+                logger.info('[%s] : [INFO] Yarn metrics merge complete',
+                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
                 print "Yarn metrics merge complete"
             else:
                 # cluster, nn, nm, dfs, dn, mr
@@ -286,7 +302,7 @@ class AdpEngine:
                         logger.error('[%s] : [ERROR] Unknown metrics context %s',
                                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), el)
                         sys.exit(1)
-            print "Finished query for yarn metrics"
+            print "Finished query and merge for yarn metrics"
         elif 'spark' in queryd:
             print "Spark metrics" #todo
         elif 'storm' in queryd:
@@ -294,13 +310,81 @@ class AdpEngine:
 
         return queryd
 
+    def filterData(self):
+        return "filtered dataframe"
+
     def trainMethod(self):
         # use threads
-        return "train method/s"
+        if self.train:
+            if self.type == 'clustering':
+                if self.method in self.allowedMethodsClustering:
+                    print "Training with selected method %s of type %s" % (self.method, self.type)
+                    print "Method %s settings detected -> %s" % (self.method, str(self.methodSettings))
+                    print "Saving model with name %s" % self.modelName(self.method, self.export)
+                    # TODO: dweka instance for training selected method with parameters
+                    return self.modelName(self.method, self.export)
+                else:
+                    logger.error('[%s] : [ERROR] Unknown method %s of type %s ',
+                                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.method, self.type)
+                    print "Unknown method %s of type %s" %(self.method, self.type)
+                    sys.exit(1)
+            elif self.type == 'classification':
+                print "Not yet supported!"  # TODO
+                sys.exit(0)
+            else:
+                logger.error('[%s] : [ERROR] Unknown type %s ',
+                                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.type)
+                sys.exit(1)
+        else:
+            print "Training is set to false, skipping..."
+            logger.warning('[%s] : [WARN] Training is set to false, skipping...',
+                                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+            return 0
 
-    def runMethod(self):
+    def detectAnomalies(self):
+        if self.detect:
+            if self.type == 'clustering':
+                if self.method in self.allowedMethodsClustering:
+                    print "Detecting with selected method %s of type %s" % (self.method, self.type)
+                    if os.path.isfile(os.path.join(self.modelsDir, self.modelName(self.method, self.load))):
+                        print "Model found at %s" %str(os.path.join(self.modelsDir, self.modelName(self.method, self.load)))
+                        # TODO load trained model and start detection using dweka selected method and qinterval
+                    else:
+                        logger.error('[%s] : [ERROR] Model %s not found at %s ',
+                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.load,
+                                     str(os.path.join(self.modelsDir, self.modelName(self.method, self.load))))
+                        sys.exit(1)
+                else:
+                    print "Unknown method %s of type %s" % (self.method, self.type)
+                    logger.error('[%s] : [ERROR] Unknown method %s of type %s ',
+                                 datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.method,
+                                 self.type)
+                    sys.exit(1)
+            elif self.type == 'classification':
+                print "Not yet supported!"  # TODO
+                sys.exit(0)
+            else:
+                logger.error('[%s] : [ERROR] Unknown type %s ',
+                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.type)
+                sys.exit(1)
+        else:
+            print "Detect is set to false, skipping..."
+            logger.warning('[%s] : [WARN] Detect is set to false, skipping...',
+                           datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(self.detect))
+            return 0
         # use threads
-        return "select and run methods for a given time interval until adp exits"
+
+    def run(self):
+        return "run"
+
+    def modelName(self, methodname, modelName):
+        '''
+        :param methodname: -> name of current method (self.method)
+        :param modelName: ->name of current export (self.export)
+        :return:
+        '''
+        saveName = "%s_%s.model" %(methodname, modelName)
+        return saveName
 
     def loadModel(self):
         return "model"
@@ -335,6 +419,13 @@ class AdpEngine:
         print "Querying DFS metrics complete."
         logger.info('[%s] : [INFO] Querying DFS metrics complete.',
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+
+        print "Starting DFS merge ..."
+        merged_DFS = self.dformat.chainMergeDFS()
+        self.dformat.df2csv(merged_DFS, os.path.join(self.dataDir, 'DFS_Merged.csv'))
+        logger.info('[%s] : [INFO] DFS merge complete',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        print "DFS merge complete."
 
     def getNodeManager(self, nodes):
         print "Querying  Node Manager and Shuffle metrics ..."
@@ -374,6 +465,14 @@ class AdpEngine:
         print "Querying  Node Manager and Shuffle metrics complete."
         logger.info('[%s] : [INFO] Querying  Node Manager and Shuffle metrics complete...',
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+
+        print "Starting Node Manager merge ..."
+        nm_merged, jvmnn_merged = self.dformat.chainMergeNM()
+        self.dformat.df2csv(nm_merged, os.path.join(self.dataDir, 'NM_Merged.csv'))
+        self.dformat.df2csv(jvmnn_merged, os.path.join(self.dataDir, 'JVM_NM_Merged.csv'))
+        logger.info('[%s] : [INFO] Node Manager Merge complete',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        print "Node Manager Merge Complete"
 
     def getNameNode(self):
         print "Querying  Name Node metrics ..."
@@ -416,6 +515,13 @@ class AdpEngine:
         print "Querying  Cluster metrics complete"
         logger.info('[%s] : [INFO] Querying  Name Node metrics complete',
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+
+        print "Starting cluster merge ..."
+        merged_cluster = self.dformat.chainMergeCluster()
+        self.dformat.df2csv(merged_cluster, os.path.join(self.dataDir, 'Cluster_Merged.csv'))
+        logger.info('[%s] : [INFO] Cluster Merge complete',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        print "Cluster merge complete"
 
     def getMapnReduce(self, nodes):
         # per slave unique process name list
@@ -505,6 +611,13 @@ class AdpEngine:
         print "Querying  Data Node metrics complete"
         logger.info('[%s] : [INFO] Querying  Data Node metrics complete',
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+
+        print "Starting Data Node metrics merge ..."
+        dn_merged = self.dformat.chainMergeDN()
+        self.dformat.df2csv(dn_merged, os.path.join(self.dataDir, 'DN_Merged.csv'))
+        logger.info('[%s] : [INFO] Data Node metrics merge complete',
+                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        print "Data Node metrics merge complete"
 
 
     def printTest(self):
