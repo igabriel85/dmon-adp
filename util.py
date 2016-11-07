@@ -21,6 +21,7 @@ from os import listdir
 from os.path import isfile, join
 import os
 import csv
+import pandas as pd
 
 
 modelDir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
@@ -79,22 +80,25 @@ def getModelList():
     return onlyfiles
 
 
-def csvheaders2colNames(csvfile, adname):
-    with open(csvfile, 'rb') as f:
-        reader = csv.reader(f)
-        i = reader.next()
-    i.pop
+def csvheaders2colNames(csvfile, adname, df=False):
     colNames = {}
-    for e in i:
-        if e == 'key':
-            pass
-        else:
-            colNames[e] = '%s_%s' %(e, adname)
+    if not df:
+        with open(csvfile, 'rb') as f:
+            reader = csv.reader(f)
+            i = reader.next()
+        i.pop
+        for e in i:
+            if e == 'key':
+                pass
+            else:
+                colNames[e] = '%s_%s' %(e, adname)
+    else:
+        for e in csvfile.columns.values:
+            if e =='key':
+                pass
+            else:
+                colNames[e] = '%s_%s' % (e, adname)
     return colNames
-
-
-
-
 
 # testcsv = "/Users/Gabriel/Documents/workspaces/diceWorkspace/dmon-adp/data/JVM_NM_dice.cdh.slave1.csv"
 #

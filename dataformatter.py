@@ -269,14 +269,6 @@ class DataFormatter():
         logger.info('[%s] : [INFO] Sistem metrics merge complete',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
 
-    def chainMergeYarn(self):
-        logger.info('[%s] : [INFO] Startig YARN metrics merge .......',
-                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
-        # Read Yarn files
-        allJvmNodeManager = glob.glob(os.path.join(self.dataDir, "JVM_NM_*.csv"))
-        allNodeManager = glob.glob(os.path.join(self.dataDir, "NM_*.csv"))
-        allDataNode = glob.glob(os.path.join(self.dataDir, "DN_*.csv"))
-
     def dict2csv(self, response, query, filename, df=False):
         '''
         :param response: elasticsearch response
