@@ -15,7 +15,7 @@ class dweka:
         data = converters.load_any_file(os.path.join(self.dataDir, fName))
         return data
 
-    def simpleKMeans(self, data, options):
+    def simpleKMeans(self, dataf, options):
         '''
         :param data: -> data to be clustered
         :param options: -> SimpleKMeans options
@@ -29,6 +29,7 @@ class dweka:
         '''
         try:
             jvm.start()
+            data = self.loadData(dataf)
             clusterer = Clusterer(classname="weka.clusterers.SimpleKMeans", options=options)
             clusterer.build_clusterer(data)
             print clusterer
@@ -41,9 +42,8 @@ class dweka:
             print(traceback.format_exc())
         finally:
             jvm.stop()
-        return "kmeans"
 
-    def dbscan(self, data, options):
+    def dbscan(self, dataf, options):
         '''
         :param data: -> data to be clustered
         :param options: -> SimpleKMeans options
@@ -57,16 +57,18 @@ class dweka:
 
         try:
             jvm.start()
+            data = self.loadData(dataf)
             clusterDBSCAN = Clusterer(classname="weka.clusterers.DBSCAN", options=options)
             clusterDBSCAN.build_clusterer(data)
             print clusterDBSCAN
+            print type(clusterDBSCAN)
             # cluster the data
         except Exception, e:
             print(traceback.format_exc())
         finally:
             jvm.stop()
 
-    def em(self, data, options):
+    def em(self, dataf, options):
         '''
         :param data: -> data to be clustered
         :param options: -> EM options
@@ -81,6 +83,7 @@ class dweka:
         '''
         try:
             jvm.start()
+            data = self.loadData(dataf)
             clusterEM = Clusterer(classname="weka.clusterers.EM",
                               options=options)
             clusterEM.build_clusterer(data)
@@ -89,3 +92,4 @@ class dweka:
             print(traceback.format_exc())
         finally:
             jvm.stop()
+
