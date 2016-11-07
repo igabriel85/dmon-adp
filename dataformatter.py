@@ -27,12 +27,10 @@ from util import convertCsvtoArff, csvheaders2colNames
 import weka.core.jvm as jvm
 
 
-class DataFormatter():
+class DataFormatter:
 
     def __init__(self, dataDir):
         self.dataDir = dataDir
-
-    rawdataset = {}
 
     def getJson(self):
         return 'load Json'
@@ -62,23 +60,18 @@ class DataFormatter():
         else:
             return df[df.key < ld]
 
-        # new_df = df_drop[df.key > 1477562060000]
-        # print new_df
-        # final_df = new_df[df.key < 1477562090000]
-        # print final_df
-
     def dropColumns(self, df, lColumns, cp=True):
         '''
+        Inplace true means the selected df will be modified
         :param df: dataframe
         :param lColumns: filtere clolumns
         :param cp: create new df
-        inplace true means the slected df will be modified
         '''
         if cp:
-            df.drop(lColumns, axis=1)
-            return 0
+            return df.drop(lColumns, axis=1)
         else:
-            return df.drop(lColumns,axis=1, inplace=True)
+            df.drop(lColumns, axis=1, inplace=True)
+            return 0
 
     def merge(self, csvOne, csvTwo, merged):
         '''
@@ -96,13 +89,24 @@ class DataFormatter():
                     str(csvOne), str(csvTwo), str(merged))
 
     def merge2(self, csvOne, csvTwo, merged):
+        '''
+        Second version
+        :param csvOne: first csv to load
+        :param csvTwo: second csv to load
+        :param merged: merged file name
+        :return:
+        '''
         fone = pd.read_csv(csvOne)
         ftwo = pd.read_csv(csvTwo)
         mergedCsv = pd.concat([fone, ftwo], axis=1, keys='key')
         mergedCsv.to_csv(merged, index=False)
-        return "Merge second version"
 
     def mergeall(self, datadir, merged):
+        '''
+        :param datadir: -> datadir lication
+        :param merged: -> name of merged file
+        :return:
+        '''
         all_files = glob.glob(os.path.join(datadir, "*.csv"))
 
         df_from_each_file = (pd.read_csv(f) for f in all_files)
@@ -209,6 +213,11 @@ class DataFormatter():
         return df_DN
 
     def listMerge(self, lFiles):
+        '''
+        :param lFiles: -> list of files
+        :return: merged dataframe
+        :note: Only use if dataframes have divergent headers
+        '''
         dfList = []
         for f in lFiles:
             df = pd.read_csv(f)
@@ -275,7 +284,7 @@ class DataFormatter():
         :param query: elasticserch query
         :param filename: name of file
         :param df: if set to true method returns dataframe and doesn't save to file.
-        :return:
+        :return: 0 if saved to file and dataframe if not
         '''
         requiredMetrics = []
         logger.info('[%s] : [INFO] Started response to csv conversion',
@@ -348,14 +357,20 @@ class DataFormatter():
                 sys.exit(1)
             logger.info('[%s] : [INFO] Finished csv %s',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), filename)
+            return 0
         else:
             df = pd.DataFrame(requiredMetrics)
-            df.set_index('key', inplace=True)
+            # df.set_index('key', inplace=True)
             logger.info('[%s] : [INFO] Created dataframe  %s',
                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
             return df
 
     def dict2arff(self, fileIn, fileOut):
+        '''
+        :param fileIn: name of csv file
+        :param fileOut: name of new arff file
+        :return:
+        '''
         dataIn = os.path.join(self.dataDir, fileIn)
         dataOut = os.path.join(self.dataDir, fileOut)
         logger.info('[%s] : [INFO] Starting conversion of %s to %s', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), dataIn, dataOut)
