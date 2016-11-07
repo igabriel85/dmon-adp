@@ -23,7 +23,7 @@ import time
 import sys
 import pandas as pd
 import glob
-from util import convertCsvtoArff
+from util import convertCsvtoArff, csvheaders2colNames
 import weka.core.jvm as jvm
 
 
@@ -49,8 +49,8 @@ class DataFormatter():
             sys.exit(1)
         return df[lColumns]
 
-    def filterRows(self):
-        return "Filtered rows"
+    def filterRows(self, df):
+        return df.ix
 
     def merge(self, csvOne, csvTwo, merged):
         '''
@@ -111,7 +111,7 @@ class DataFormatter():
 
     def chainMergeNR(self):
         '''
-        :return: -> merged dataframe
+        :return: -> merged dataframe System metrics
         '''
 
         interface = os.path.join(self.dataDir, "Interface.csv")
@@ -122,6 +122,63 @@ class DataFormatter():
         lFiles = [interface, memory, load, packets]
 
         return self.listMerge(lFiles)
+
+    def chainMergeDFS(self):
+        '''
+        :return: -> merged dfs metrics
+        '''
+
+        dfs = os.path.join(self.dataDir, "DFS.csv")
+        dfsfs = os.path.join(self.dataDir, "DFSFS.csv")
+        fsop = os.path.join(self.dataDir, "FSOP.csv")
+
+        lFiles = [dfs, dfsfs, fsop]
+
+        return self.listMerge(lFiles)
+
+    def chainMergeCluster(self):
+        '''
+        :return: -> merged cluster metrics
+        '''
+
+        clusterMetrics = os.path.join(self.dataDir, "ClusterMetrics.csv")
+        queue = os.path.join(self.dataDir, "ResourceManagerQueue.csv")
+        jvmRM = os.path.join(self.dataDir, "JVM_RM.csv")
+        jvmmrapp = os.path.join(self.dataDir, "JVM_MRAPP.csv")
+
+        lFiles = [clusterMetrics, queue, jvmRM, jvmmrapp]
+
+        return self.listMerge(lFiles)
+
+    def chainMergeNM(self):
+        '''
+        :return: -> merged namenode metrics
+        '''
+
+        # Read files
+        allNM = glob.glob(os.path.join(self.dataDir, "NM_*.csv"))
+        allNMJvm = glob.glob(os.path.join(self.dataDir, "JVM_NM_*.csv"))
+
+        # Get column headers and gen dict with new col headers
+        colNamesNM = csvheaders2colNames(allNM[0], 'slave1')
+        df_NM = self.chainMerge(allNM, colNamesNM, iterStart=2)
+
+        colNamesJVMNN = csvheaders2colNames(allNMJvm[0], 'slave1')
+        df_NM_JVM = self.chainMerge(allNMJvm, colNamesJVMNN, iterStart=2)
+
+        return df_NM, df_NM_JVM
+
+    def chainMergeDN(self):
+        '''
+        :return: -> merged datanode metrics
+        '''
+        # Read files
+        allDN = glob.glob(os.path.join(self.dataDir, "DN_*.csv"))
+
+        # Get column headers and gen dict with new col headers
+        colNamesDN = csvheaders2colNames(allDN[0], 'slave1')
+        df_DN = self.chainMerge(allDN, colNamesDN, iterStart=2)
+        return df_DN
 
     def listMerge(self, lFiles):
         dfList = []
