@@ -152,7 +152,7 @@ class QueryConstructor():
         cquery.aggs["3"].aggs["43"].avg.field = "ContainersKilled"
         cquery.aggs["3"].aggs["44"].avg.field = "ContainersIniting"
         cquery.aggs["3"].aggs["45"].avg.field = "ContainersRunning"
-        cquery.aggs["3"].aggs["47"].avg.field = "AvailableGB"
+        cquery.aggs["3"].aggs["47"].avg.field = "AllocatedGB"
         cquery.aggs["3"].aggs["48"].avg.field = "AllocatedContainers"
         cquery.aggs["3"].aggs["49"].avg.field = "AvailableGB"
         cquery.aggs["3"].aggs["50"].avg.field = "AllocatedVCores"

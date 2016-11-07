@@ -88,7 +88,7 @@ tquery = {
                     },
                     "47": {
                         "avg": {
-                            "field": "AvailableGB"
+                            "field": "AllocatedGB"
                         }
                     },
                     "48": {
