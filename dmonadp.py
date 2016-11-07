@@ -42,7 +42,7 @@ def main(argv):
         "qsize": None,
         "qinterval": None,
         "train": None, # Bool default None
-        "model":None,
+        "type":None,
         "load":None,
         "file": None,
         "method": None,
@@ -51,13 +51,13 @@ def main(argv):
         "detect": None, # Bool default None
         "sload": None,
         "smemory": None,
-        "snetwork": None
+        "snetwork": None,
+        "heap":None
     }
 
     # Only for testing
-    settings['train'] = True
+
     settings['validate'] = False
-    settings['detect'] = False
 
     try:
         opts, args = getopt.getopt(argv, "he:tf:m:vx:d:lq:", ["endpoint=", "file=", "method=", "export=", "detect=", "query="])  # todo:expand comand line options
@@ -288,20 +288,20 @@ def main(argv):
         logger.info('[%s] : [INFO] Method is set to %s from comandline',
                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings["method"])
 
-    if settings["model"] is None:
+    if settings["type"] is None:
         try:
-            print "Detect Model -> %s" %readCnf['Detect']['model']
-            settings["model"] = readCnf['Detect']['model']
-            logger.info('[%s] : [INFO] Model is set to %s from conf',
-                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings["model"])
+            print "Detect Type -> %s" %readCnf['Detect']['type']
+            settings["type"] = readCnf['Detect']['type']
+            logger.info('[%s] : [INFO] Type is set to %s from conf',
+                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings["type"])
         except:
-            logger.error('[%s] : [ERROR] Model is not set in conf or comandline!',
+            logger.error('[%s] : [ERROR] Type is not set in conf or comandline!',
                                  datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
             sys.exit(1)
     else:
-        print "Detect Model -> %s" %settings['model']
-        logger.info('[%s] : [INFO] Model is set to %s from comandline',
-                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings["model"])
+        print "Detect Type -> %s" %settings['type']
+        logger.info('[%s] : [INFO] Type is set to %s from comandline',
+                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings["type"])
 
     if settings["export"] is None:
         try:
@@ -378,7 +378,16 @@ def main(argv):
         logger.warning('[%s] : [WARN] System netowrk is not set, using default!',
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
 
-
+    try:
+        print "Heap size set to -> %s" %readCnf['Misc']['heap']
+        settings['heap'] = readCnf['Misc']['heap']
+        logger.info('[%s] : [INFO] Heap size set to %s',
+                datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['heap'])
+    except:
+        print "Heap size not defined using default"
+        settings['heap'] = '512m'
+        logger.info('[%s] : [INFO] Heap size set to default %s',
+                datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['heap'])
 
     #if settings["esendpoint"] == None:
 
@@ -390,8 +399,9 @@ def main(argv):
 
     engine = dmonadpengine.AdpEngine(settings, dataDir=dataDir, modelsDir=modelsDir)
     engine.initConnector()
-    engine.getData()
-
+    # engine.getData()
+    engine.trainMethod()
+    engine.detectAnomalies()
 
     print "#" * 100
 
