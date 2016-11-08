@@ -42,8 +42,8 @@ def main(argv):
         "qsize": None,
         "qinterval": None,
         "train": None, # Bool default None
-        "type":None,
-        "load":None,
+        "type": None,
+        "load": None,
         "file": None,
         "method": None,
         "validate": None, # Bool default None
@@ -55,7 +55,8 @@ def main(argv):
         "sload": None,
         "smemory": None,
         "snetwork": None,
-        "heap":None
+        "heap": None,
+        "checkpoint": None
     }
 
     # Only for testing
@@ -96,7 +97,6 @@ def main(argv):
     print "Initializing ..."
     print "Trying to read configuration file ..."
 
-    file_conf = ''
     if settings["file"] is None:
         file_conf = 'dmonadp.ini'
         logger.info('[%s] : [INFO] Settings file set to %s',
@@ -428,9 +428,11 @@ def main(argv):
 
     engine = dmonadpengine.AdpEngine(settings, dataDir=dataDir, modelsDir=modelsDir)
     engine.initConnector()
-    # engine.getData()
+    engine.getData()
+    # engine.filterData(df)
     engine.trainMethod()
     engine.detectAnomalies()
+    # engine.printTest()
 
     print "#" * 100
 

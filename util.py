@@ -80,7 +80,7 @@ def getModelList():
     return onlyfiles
 
 
-def csvheaders2colNames(csvfile, adname, df=False):
+def csvheaders2colNames(csvfile, adname):
     '''
     :param csvfile: -> input csv or dataframe
     :param adname: -> string to add to column names
@@ -88,7 +88,7 @@ def csvheaders2colNames(csvfile, adname, df=False):
     :return:
     '''
     colNames = {}
-    if not df:
+    if isinstance(csvfile, str):
         with open(csvfile, 'rb') as f:
             reader = csv.reader(f)
             i = reader.next()
@@ -98,12 +98,14 @@ def csvheaders2colNames(csvfile, adname, df=False):
                 pass
             else:
                 colNames[e] = '%s_%s' %(e, adname)
-    else:
+    elif isinstance(csvfile, pd.DataFrame):
         for e in csvfile.columns.values:
             if e =='key':
                 pass
             else:
                 colNames[e] = '%s_%s' % (e, adname)
+    else:
+        return 0
     return colNames
 
 
@@ -118,6 +120,21 @@ def str2Bool(st):
         return 0
     else:
         return 0
+
+
+def cfilterparse(filter):
+    return filter.split(';')
+
+
+def rfilterparse(filter):
+    ld = 0
+    gd = 0
+    for e in filter.split(';'):
+        if e.split(':')[0] == 'ld':
+            ld = e.split(':')[1]
+        if e.split(':')[0] == 'gd':
+            gd = e.split(':')[1]
+    return ld, gd
 
 
 # testcsv = "/Users/Gabriel/Documents/workspaces/diceWorkspace/dmon-adp/data/JVM_NM_dice.cdh.slave1.csv"

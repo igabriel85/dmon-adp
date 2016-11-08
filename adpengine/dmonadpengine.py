@@ -1,6 +1,6 @@
 import os
 from dmonconnector import *
-from util import queryParser, nodesParse, str2Bool
+from util import queryParser, nodesParse, str2Bool, cfilterparse, rfilterparse
 
 
 class AdpEngine:
@@ -36,6 +36,9 @@ class AdpEngine:
         self.allowedMethodsClustering = ['skm', 'em', 'dbscan']
         self.allowefMethodsClassification = []  # TODO
         self.heap = settingsDict['heap']
+        self.cfilter = settingsDict['cfilter']
+        self.rfilter = settingsDict['rfilter']
+        self.dfilter = settingsDict['dfilter']
 
     def initConnector(self):
         print "Establishing connection with dmon ....."
@@ -66,7 +69,7 @@ class AdpEngine:
         self.regnodeList = self.dmonConnector.getNodeList()
         print "Nodes found -> %s" %self.regnodeList
 
-    def getData(self):
+    def getData(self, checkpoint=False):
         queryd = queryParser(self.query)
         logger.info('[%s] : [INFO] Checking node list',
                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
@@ -280,6 +283,8 @@ class AdpEngine:
                 dn_merged = self.dformat.chainMergeDN()
                 self.dformat.df2csv(dn_merged, os.path.join(self.dataDir, 'DN_Merged.csv'))
 
+                final_merge = self.dformat.mergeFinal()
+                self.dformat.df2csv(final_merge, os.path.join(self.dataDir, 'Final_Merge.csv'))
                 logger.info('[%s] : [INFO] Yarn metrics merge complete',
                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
                 print "Yarn metrics merge complete"
@@ -302,6 +307,8 @@ class AdpEngine:
                         logger.error('[%s] : [ERROR] Unknown metrics context %s',
                                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), el)
                         sys.exit(1)
+            final_merge = self.dformat.mergeFinal()
+            self.dformat.df2csv(final_merge, os.path.join(self.dataDir, 'Final_Merge.csv'))
             print "Finished query and merge for yarn metrics"
         elif 'spark' in queryd:
             print "Spark metrics" #todo
@@ -310,8 +317,57 @@ class AdpEngine:
 
         return queryd
 
-    def filterData(self):
-        return "filtered dataframe"
+    def filterData(self, df, m=False):
+        '''
+        :param df: -> dataframe to be filtered
+        :param m: -> modify df in place or copy
+        :return: ->  filtred df
+        '''
+        if self.cfilter is None:
+            print "Column filter not set skipping ..."
+            logger.info('[%s] : [INFO] Column filter not set skipping',
+                                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        else:
+            if not cfilterparse(self.cfilter):
+                print "Column filter is empty skipping ..."
+                logger.warning('[%s] : [WARN] Column filter is empty skipping',
+                                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+            else:
+                print "Column filter is set to %s filtering ..." %cfilterparse(self.cfilter)
+                logger.info('[%s] : [INFO] Column filter is set to %s filtering ...',
+                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.cfilter)
+                df = self.dformat.filterColumns(df, cfilterparse(self.cfilter))
+        if self.rfilter is None:
+            print "Row filter not set skipping ..."
+            logger.info('[%s] : [INFO] Row filter not set skipping',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        else:
+            ld, gd = rfilterparse(self.rfilter)
+            if ld == 0 and gd == 0:
+                print "Both ld and gd are set to zero skipping row filter ..."
+                logger.info('[%s] : [INFO] Both ld and gd are set to zero skipping row filter',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+            else:
+                print "Row filter is set to gd->%s and ld->%s filtering ..." % (ld, gd)
+                logger.info('[%s] : [INFO] Row filter is set to gd->%s and ld->%s filtering',
+                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), ld, gd)
+                df = self.dformat.filterRows(df, int(ld), int(gd))
+        if self.dfilter is None:
+            print"Drop columns not set skipping ..."
+            logger.info('[%s] : [INFO] Drop columns not set skipping',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        else:
+            if not cfilterparse(self.dfilter):
+                print "Drop column filter is empty skipping ..."
+                logger.warning('[%s] : [WARN] Drop column filter is empty skipping',
+                               datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+            else:
+                print "Drop column filter is set to %s filtering ..." %cfilterparse(self.dfilter)
+                if m:
+                    self.dformat.dropColumns(self, df, cfilterparse(self.dfilter), cp=False)
+                else:
+                    df = self.dformat.dropColumns(self, df, cfilterparse(self.dfilter), cp=True)
+        return df
 
     def trainMethod(self):
         # use threads
@@ -425,7 +481,7 @@ class AdpEngine:
 
         print "Starting DFS merge ..."
         merged_DFS = self.dformat.chainMergeDFS()
-        self.dformat.df2csv(merged_DFS, os.path.join(self.dataDir, 'DFS_Merged.csv'))
+        self.dformat.df2csv(merged_DFS, os.path.join(self.dataDir, 'Merged_DFS.csv'))
         logger.info('[%s] : [INFO] DFS merge complete',
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
         print "DFS merge complete."
@@ -470,9 +526,10 @@ class AdpEngine:
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
 
         print "Starting Node Manager merge ..."
-        nm_merged, jvmnn_merged = self.dformat.chainMergeNM()
-        self.dformat.df2csv(nm_merged, os.path.join(self.dataDir, 'NM_Merged.csv'))
-        self.dformat.df2csv(jvmnn_merged, os.path.join(self.dataDir, 'JVM_NM_Merged.csv'))
+        nm_merged, jvmnn_merged, shuffle_merged = self.dformat.chainMergeNM()
+        self.dformat.df2csv(nm_merged, os.path.join(self.dataDir, 'Merged_NM.csv'))
+        self.dformat.df2csv(jvmnn_merged, os.path.join(self.dataDir, 'Merged_JVM_NM.csv'))
+        self.dformat.df2csv(shuffle_merged, os.path.join(self.dataDir, 'Merged_Shuffle.csv'))
         logger.info('[%s] : [INFO] Node Manager Merge complete',
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
         print "Node Manager Merge Complete"
@@ -521,7 +578,7 @@ class AdpEngine:
 
         print "Starting cluster merge ..."
         merged_cluster = self.dformat.chainMergeCluster()
-        self.dformat.df2csv(merged_cluster, os.path.join(self.dataDir, 'Cluster_Merged.csv'))
+        self.dformat.df2csv(merged_cluster, os.path.join(self.dataDir, 'Merged_Cluster.csv'))
         logger.info('[%s] : [INFO] Cluster Merge complete',
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
         print "Cluster merge complete"
@@ -617,7 +674,7 @@ class AdpEngine:
 
         print "Starting Data Node metrics merge ..."
         dn_merged = self.dformat.chainMergeDN()
-        self.dformat.df2csv(dn_merged, os.path.join(self.dataDir, 'DN_Merged.csv'))
+        self.dformat.df2csv(dn_merged, os.path.join(self.dataDir, 'Merged_DN.csv'))
         logger.info('[%s] : [INFO] Data Node metrics merge complete',
                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
         print "Data Node metrics merge complete"
