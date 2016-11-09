@@ -418,6 +418,23 @@ def main(argv):
     finally:
         logger.info('[%s] : [INFO] Filter drop column set to %s',
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['dfilter'])
+
+    if settings["checkpoint"] is None:
+        try:
+            print "Checkpointing is set to %s" %readCnf['Misc']['checkpoint']
+            settings["checkpoint"] = readCnf['Misc']['checkpoint']
+            logger.info('[%s] : [INFO] Checkpointing is  set to %s',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['checkpoint'])
+        except:
+            print "Checkpointing not set using default"
+            settings["checkpoint"] = "True"
+        logger.info('[%s] : [INFO] Checkpointing is  set to True',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+    else:
+        print "Checkpointing is set to %s" %settings["checkpoint"]
+        logger.info('[%s] : [INFO] Checkpointing is  set to %s',
+                datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['checkpoint'])
+
     #if settings["esendpoint"] == None:
 
     #dmonC = Connector('85.120.206.27')
