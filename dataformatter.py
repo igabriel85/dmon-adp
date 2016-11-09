@@ -144,7 +144,7 @@ class DataFormatter:
                 iterSlave[k] = v+str(i)
             current = current.merge(frame).rename(columns=iterSlave)
         #current.to_csv(mergedFile)
-        current.set_index('key', inplace=True)
+        # current.set_index('key', inplace=True)
         return current
 
     def chainMergeNR(self, interface=None, memory=None, load=None, packets=None):
@@ -158,7 +158,6 @@ class DataFormatter:
             packets = os.path.join(self.dataDir, "Packets.csv")
 
         lFiles = [interface, memory, load, packets]
-
         return self.listMerge(lFiles)
 
     def chainMergeDFS(self, dfs=None, dfsfs=None, fsop=None):
@@ -171,7 +170,6 @@ class DataFormatter:
             fsop = os.path.join(self.dataDir, "FSOP.csv")
 
         lFiles = [dfs, dfsfs, fsop]
-
         return self.listMerge(lFiles)
 
     def chainMergeCluster(self, clusterMetrics=None, queue=None, jvmRM=None, jvmmrapp=None):
@@ -190,7 +188,7 @@ class DataFormatter:
 
     def chainMergeNM(self, lNM=None, lNMJvm=None, lShuffle=None):
         '''
-        :return: -> merged namenode metrics
+        :return: -> merged namemanager metrics
         '''
 
         # Read files
@@ -207,8 +205,8 @@ class DataFormatter:
         colNamesNM = csvheaders2colNames(allNM[0], 'slave1')
         df_NM = self.chainMerge(allNM, colNamesNM, iterStart=2)
 
-        colNamesJVMNN = csvheaders2colNames(allNMJvm[0], 'slave1')
-        df_NM_JVM = self.chainMerge(allNMJvm, colNamesJVMNN, iterStart=2)
+        colNamesJVMNM = csvheaders2colNames(allNMJvm[0], 'slave1')
+        df_NM_JVM = self.chainMerge(allNMJvm, colNamesJVMNM, iterStart=2)
 
         colNamesShuffle = csvheaders2colNames(allShuffle[0], 'slave1')
         df_Shuffle = self.chainMerge(allShuffle, colNamesShuffle, iterStart=2)
@@ -255,8 +253,9 @@ class DataFormatter:
             logger.error('[%s] : [INFO] Cannot merge type %s',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(type(dfList[0])))
 
+
         current = reduce(lambda x, y: pd.merge(x, y, on='key'), dfList)
-        current.set_index('key', inplace=True)
+        # current.set_index('key', inplace=True)
         return current
 
     def df2csv(self, dataFrame, mergedFile):
@@ -265,6 +264,7 @@ class DataFormatter:
         :param mergedFile: merged csv file name
         :return:
         '''
+        dataFrame.set_index('key', inplace=True)
         dataFrame.to_csv(mergedFile)
 
     def chainMergeSystem(self):
