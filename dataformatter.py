@@ -45,6 +45,10 @@ class DataFormatter:
             logger.error('[%s] : [ERROR] Dataformatter filter method expects list of column names not %s',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(lColumns))
             sys.exit(1)
+        if not lColumns in df.columns.values:
+            logger.error('[%s] : [ERROR] Dataformatter filter method unknown columns %s',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), lColumns)
+            sys.exit(1)
         return df[lColumns]
 
     def filterRows(self, df, ld, gd=0):
@@ -55,10 +59,20 @@ class DataFormatter:
         :return: -> new filtered dataframe
         '''
         if gd:
-            df = df[df.key > gd]
-            return df[df.key < ld]
+            try:
+                df = df[df.key > gd]
+                return df[df.key < ld]
+            except Exception as inst:
+                logger.error('[%s] : [ERROR] Dataformatter filter method row exited with %s and %s',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+                sys.exit(1)
         else:
-            return df[df.key < ld]
+            try:
+                return df[df.key < ld]
+            except Exception as inst:
+                logger.error('[%s] : [ERROR] Dataformatter filter method row exited with %s and %s',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+                sys.exit(1)
 
     def dropColumns(self, df, lColumns, cp=True):
         '''
@@ -68,9 +82,19 @@ class DataFormatter:
         :param cp: create new df
         '''
         if cp:
-            return df.drop(lColumns, axis=1)
+            try:
+                return df.drop(lColumns, axis=1)
+            except Exception as inst:
+                logger.error('[%s] : [ERROR] Dataformatter filter method drop columns exited with %s and %s',
+                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+                sys.exit(1)
         else:
-            df.drop(lColumns, axis=1, inplace=True)
+            try:
+                df.drop(lColumns, axis=1, inplace=True)
+            except Exception as inst:
+                logger.error('[%s] : [ERROR] Dataformatter filter method drop columns exited with %s and %s',
+                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+                sys.exit(1)
             return 0
 
     def merge(self, csvOne, csvTwo, merged):
@@ -253,7 +277,6 @@ class DataFormatter:
             logger.error('[%s] : [INFO] Cannot merge type %s',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(type(dfList[0])))
 
-
         current = reduce(lambda x, y: pd.merge(x, y, on='key'), dfList)
         # current.set_index('key', inplace=True)
         return current
@@ -264,51 +287,69 @@ class DataFormatter:
         :param mergedFile: merged csv file name
         :return:
         '''
-        dataFrame.set_index('key', inplace=True)
+        # dataFrame.set_index('key', inplace=True) -> if inplace it modifies all copies of df including
+        # in memory resident ones
+        dataFrame.set_index('key')
         dataFrame.to_csv(mergedFile)
 
-    def chainMergeSystem(self):
+    def chainMergeSystem(self, linterface=None, lload=None, lmemory=None, lpack=None):
         logger.info('[%s] : [INFO] Startig system metrics merge .......',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
         # Read files
-        allIterface = glob.glob(os.path.join(self.dataDir, "Interface_*.csv"))
-        allLoad = glob.glob(os.path.join(self.dataDir, "Load_*.csv"))
-        allMemory = glob.glob(os.path.join(self.dataDir, "Memory_*.csv"))
-        allPackets = glob.glob(os.path.join(self.dataDir, "Packets_*.csv"))
 
-        # Name of merged files
-        mergedInterface = os.path.join(self.dataDir, "Interface.csv")
-        mergedLoad = os.path.join(self.dataDir, "Load.csv")
-        mergedMemory = os.path.join(self.dataDir, "Memory.csv")
-        mergedPacket = os.path.join(self.dataDir, "Packets.csv")
+        if linterface is None and lload is None and lmemory is None and lpack is None:
+            allIterface = glob.glob(os.path.join(self.dataDir, "Interface_*.csv"))
+            allLoad = glob.glob(os.path.join(self.dataDir, "Load_*.csv"))
+            allMemory = glob.glob(os.path.join(self.dataDir, "Memory_*.csv"))
+            allPackets = glob.glob(os.path.join(self.dataDir, "Packets_*.csv"))
+
+            # Name of merged files
+            mergedInterface = os.path.join(self.dataDir, "Interface.csv")
+            mergedLoad = os.path.join(self.dataDir, "Load.csv")
+            mergedMemory = os.path.join(self.dataDir, "Memory.csv")
+            mergedPacket = os.path.join(self.dataDir, "Packets.csv")
+            ftd = 1
+        else:
+            allIterface = linterface
+            allLoad = lload
+            allMemory = lmemory
+            allPackets = lpack
+            ftd = 0
 
         colNamesInterface = {'rx': 'rx_master', 'tx': 'tx_master'}
         df_interface = self.chainMerge(allIterface, colNamesInterface)
-        self.df2csv(df_interface, mergedInterface)
+
         logger.info('[%s] : [INFO] Interface metrics merge complete',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
 
         colNamesPacket = {'rx': 'rx_master', 'tx': 'tx_master'}
         df_packet = self.chainMerge(allPackets, colNamesPacket)
-        self.df2csv(df_packet, mergedPacket)
+
         logger.info('[%s] : [INFO] Packet metrics merge complete',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
 
         colNamesLoad = {'shortterm': 'shortterm_master', 'midterm': 'midterm_master', 'longterm': 'longterm_master'}
         df_load = self.chainMerge(allLoad, colNamesLoad)
-        self.df2csv(df_load, mergedLoad)
+
         logger.info('[%s] : [INFO] Load metrics merge complete',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
 
         colNamesMemory = {'cached': 'cached_master', 'buffered': 'buffered_master',
                           'used': 'used_master', 'free': 'free_master'}
         df_memory = self.chainMerge(allMemory, colNamesMemory)
-        self.df2csv(df_memory, mergedMemory)
         logger.info('[%s] : [INFO] Memory metrics merge complete',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
 
         logger.info('[%s] : [INFO] Sistem metrics merge complete',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        if ftd:
+            self.df2csv(df_interface, mergedInterface)
+            self.df2csv(df_packet, mergedPacket)
+            self.df2csv(df_load, mergedLoad)
+            self.df2csv(df_memory, mergedMemory)
+            return 0
+        else:
+            return df_interface, df_load, df_memory, df_packet
 
     def mergeFinal(self, dfs=None, cluster=None, nodeMng=None, jvmnodeMng=None, dataNode=None, jvmNameNode=None, shuffle=None, system=None):
 
