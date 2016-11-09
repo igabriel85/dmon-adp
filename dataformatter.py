@@ -310,18 +310,22 @@ class DataFormatter:
         logger.info('[%s] : [INFO] Sistem metrics merge complete',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
 
-    def mergeFinal(self, dfs=None, cluster=None, nodeMng=None, jvmnodeMng=None, dataNode=None, system=None):
+    def mergeFinal(self, dfs=None, cluster=None, nodeMng=None, jvmnodeMng=None, dataNode=None, jvmNameNode=None, system=None):
 
-        if dfs is None and cluster is None and nodeMng is None and jvmnodeMng is None and dataNode is None and system is None:
+        if dfs is None and cluster is None and nodeMng is None and jvmnodeMng is None and dataNode is None and jvmNameNode is None and system is None:
             dfs = os.path.join(self.dataDir, "Merged_DFS.csv")
             cluster = os.path.join(self.dataDir, "Merged_Cluster.csv")
             nodeMng = os.path.join(self.dataDir, "Merged_NM.csv")
             jvmnodeMng = os.path.join(self.dataDir, "Merged_JVM_NM.csv")
             dataNode = os.path.join(self.dataDir, "Merged_DN.csv")
             system = os.path.join(self.dataDir, "System.csv")
+            jvmNameNode = os.path.join(self.dataDir, "JVM_NN.csv")
 
-        lFile = [dfs, cluster, nodeMng, jvmnodeMng, dataNode, system]
-        return self.listMerge(lFile)
+        lFile = [dfs, cluster, nodeMng, jvmnodeMng, dataNode, jvmNameNode, system]
+        merged_df = self.listMerge(lFile)
+        merged_df.sort_index(axis=1, inplace=True)
+        # merged_df.set_index('key', inplace=True)
+        return merged_df
 
     def dict2csv(self, response, query, filename, df=False):
         '''
