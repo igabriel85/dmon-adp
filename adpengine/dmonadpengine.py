@@ -44,6 +44,8 @@ class AdpEngine:
         self.sparkReturn = 0
         self.stormReturn = 0
         self.yarnReturn = 0
+        self.systemReturn = 0
+
     def initConnector(self):
         print "Establishing connection with dmon ....."
         resdmonInfo = self.dmonConnector.getDmonStatus()
@@ -96,6 +98,11 @@ class AdpEngine:
         if 'system' in queryd:
             if queryd['system'] == 0:
                 print "Starting query for system metrics ...."
+                lload = []
+                lmemory = []
+                linterface = []
+                lpack = []
+
                 for node in desNodes:
                     load, load_file = self.qConstructor.loadString(node)
                     memory, memory_file = self.qConstructor.memoryString(node)
@@ -110,25 +117,34 @@ class AdpEngine:
 
                     # Execute query and convert response to csv
                     qloadResponse = self.dmonConnector.aggQuery(qload)
-                    self.dformat.dict2csv(qloadResponse, qload, load_file)
-
                     gmemoryResponse = self.dmonConnector.aggQuery(qmemory)
-                    # print gmemoryResponse
-                    self.dformat.dict2csv(gmemoryResponse, qmemory, memory_file)
-
                     ginterfaceResponse = self.dmonConnector.aggQuery(qinterface)
-                    self.dformat.dict2csv(ginterfaceResponse, qinterface, interface_file)
-
                     gpacketResponse = self.dmonConnector.aggQuery(qpacket)
-                    self.dformat.dict2csv(gpacketResponse, qpacket, packet_file)
+                    if not checkpoint:
+                        self.dformat.dict2csv(ginterfaceResponse, qinterface, interface_file)
+                        self.dformat.dict2csv(gmemoryResponse, qmemory, memory_file)
+                        self.dformat.dict2csv(qloadResponse, qload, load_file)
+                        self.dformat.dict2csv(gpacketResponse, qpacket, packet_file)
+                    else:
+                        linterface.append(self.dformat.dict2csv(ginterfaceResponse, qinterface, interface_file, df=checkpoint))
+                        lmemory.append(self.dformat.dict2csv(gmemoryResponse, qmemory, memory_file, df=checkpoint))
+                        lload.append(self.dformat.dict2csv(qloadResponse, qload, load_file, df=checkpoint))
+                        lpack.append(self.dformat.dict2csv(gpacketResponse, qpacket, packet_file, df=checkpoint))
 
                 # Merge and rename by node system Files
                 print "Query complete startin merge ..."
-                self.dformat.chainMergeSystem()
-
-                # Merge system metricsall
-                merged_df = self.dformat.chainMergeNR()
-                self.dformat.df2csv(merged_df, os.path.join(self.dataDir, "System.csv"))
+                if not checkpoint:
+                    self.dformat.chainMergeSystem()
+                    # Merge system metricsall
+                    merged_df = self.dformat.chainMergeNR()
+                    self.dformat.df2csv(merged_df, os.path.join(self.dataDir, "System.csv"))
+                    self.systemReturn = 0
+                else:
+                    df_interface, df_load, df_memory, df_packet = self.dformat.chainMergeSystem(linterface=linterface,
+                                                                                                lload=lload, lmemory=lmemory, lpack=lpack)
+                    merged_df = self.dformat.chainMergeNR(interface=df_interface, memory=df_memory,
+                                                          load=df_load, packets=df_packet)
+                    self.systemReturn = merged_df
                 print "System Metrics merge complete"
             else:
                 print "Only for all system metrics available" #todo for metrics types
@@ -347,17 +363,14 @@ class AdpEngine:
             if not checkpoint:
                 final_merge = self.dformat.mergeFinal()
                 self.dformat.df2csv(final_merge, os.path.join(self.dataDir, 'Final_Merge.csv'))
-                print "Finished query and merge for yarn metrics"
                 self.yarnReturn = 0
             else:
-                ssystem = pd.read_csv(os.path.join(self.dataDir, 'System.csv'))
                 final_merge = self.dformat.mergeFinal(dfs=mDFS, cluster=mCluster, nodeMng=mNodeManager,
                                                       jvmnodeMng=mNodeManagerJVM, dataNode=mDataNode,
-                                                      jvmNameNode=mNameNode, shuffle=mShuffle, system=ssystem)
+                                                      jvmNameNode=mNameNode, shuffle=mShuffle, system=self.systemReturn)
                 self.dformat.df2csv(final_merge, os.path.join(self.dataDir, 'cTest.csv'))
-
-
-
+                self.yarnReturn = final_merge
+            print "Finished query and merge for yarn metrics"
 
         elif 'spark' in queryd:
             print "Spark metrics" #todo
