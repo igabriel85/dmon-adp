@@ -393,10 +393,13 @@ def main(argv):
                 datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['heap'])
 
     try:
-        print "Filter columns -> %s" %readCnf['Filter']['columns']
-        settings["cfilter"] = readCnf['Filter']['columns']
+        if readCnf['Filter']['columns']:
+            print "Filter columns -> %s" %readCnf['Filter']['columns']
+            settings["cfilter"] = readCnf['Filter']['columns']
+        else:
+            print "Filter columns -> %s" % settings["cfilter"]
     except:
-        print "Filter columns -> %s" %settings["cfilter"]
+        print "Filter columns -> %s" % settings["cfilter"]
     finally:
         logger.info('[%s] : [INFO] Filter column set to %s',
                 datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['cfilter'])
@@ -411,8 +414,11 @@ def main(argv):
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['rfilter'])
 
     try:
-        print "Filter drop columns -> %s" % readCnf['Filter']['DColumns']
-        settings["dfilter"] = readCnf['Filter']['DColumns']
+        if readCnf['Filter']['dcolumns']:
+            print "Filter drop columns -> %s" % readCnf['Filter']['dcolumns']
+            settings["dfilter"] = readCnf['Filter']['dcolumns']
+        else:
+            print "Filter drop columns -> %s" % settings["dfilter"]
     except:
         print "Filter drop columns -> %s" % settings["dfilter"]
     finally:
@@ -445,8 +451,8 @@ def main(argv):
 
     engine = dmonadpengine.AdpEngine(settings, dataDir=dataDir, modelsDir=modelsDir)
     engine.initConnector()
-    engine.getData()
-    # engine.filterData(df)
+    yarnReturn, reducemetrics, mapmetrics, sparkReturn, stormReturn = engine.getData()
+    filtered_df = engine.filterData(yarnReturn)
     engine.trainMethod()
     engine.detectAnomalies()
     # engine.printTest()

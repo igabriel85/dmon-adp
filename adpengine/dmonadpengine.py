@@ -1,6 +1,6 @@
 import os
 from dmonconnector import *
-from util import queryParser, nodesParse, str2Bool, cfilterparse, rfilterparse, assertFrameEqual
+from util import queryParser, nodesParse, str2Bool, cfilterparse, rfilterparse
 import pandas as pd
 
 
@@ -161,8 +161,8 @@ class AdpEngine:
                 lNMJvm = []
                 lShuffle = []
                 lDataNode = []
-                lmap = []
-                lreduce = []
+                lmap = {}
+                lreduce = {}
                 for node in desNodes:
                     nodeManager, nodeManager_file = self.qConstructor.nodeManagerString(node)
                     jvmNodeManager, jvmNodeManager_file = self.qConstructor.jvmnodeManagerString(node)
@@ -245,7 +245,8 @@ class AdpEngine:
                             if not checkpoint:
                                 self.dformat.dict2csv(ghreduce, qhreduce, hreduce_file)
                             else:
-                                lreduce.append(self.dformat.dict2csv(ghreduce, qhreduce, hreduce_file, df=checkpoint))
+                                # lreduce.append(self.dformat.dict2csv(ghreduce, qhreduce, hreduce_file, df=checkpoint))
+                                lreduce[process] = self.dformat.dict2csv(ghreduce, qhreduce, hreduce_file, df=checkpoint)
                     else:
                         logger.info('[%s] : [INFO] No reduce process for host  %s found',
                                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), host)
@@ -263,7 +264,8 @@ class AdpEngine:
                             if not checkpoint:
                                 self.dformat.dict2csv(ghmap, qhmap, hmap_file)
                             else:
-                                lmap.append(self.dformat.dict2csv(ghmap, qhmap, hmap_file, df=checkpoint))
+                                # lmap.append(self.dformat.dict2csv(ghmap, qhmap, hmap_file, df=checkpoint))
+                                lmap[process] = self.dformat.dict2csv(ghmap, qhmap, hmap_file, df=checkpoint)
                     else:
                         logger.info('[%s] : [INFO] No map process for host  %s found',
                                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), host)
@@ -350,7 +352,7 @@ class AdpEngine:
                                                          jvmnodeMng=jvmNode_manager, dataNode=datanode_merge,
                                                          jvmNameNode=df_jvmNameNode, shuffle=mShuffle,
                                                          system=self.systemReturn)
-                   self.dformat.df2csv(final_merge, os.path.join(self.dataDir, 'cTest.csv'))
+
                    self.yarnReturn = final_merge
                 logger.info('[%s] : [INFO] Yarn metrics merge complete',
                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
@@ -386,10 +388,10 @@ class AdpEngine:
                 final_merge = self.dformat.mergeFinal(dfs=mDFS, cluster=mCluster, nodeMng=mNodeManager,
                                                       jvmnodeMng=mNodeManagerJVM, dataNode=mDataNode,
                                                       jvmNameNode=mNameNode, shuffle=mShuffle, system=self.systemReturn)
-                self.dformat.df2csv(final_merge, os.path.join(self.dataDir, 'cTest.csv'))
                 self.yarnReturn = final_merge
                 self.reducemetrics = mReduce
                 self.mapmetrics = mMap
+                self.dformat.df2csv(final_merge, os.path.join(self.dataDir, 'cTest.csv'))
             print "Finished query and merge for yarn metrics"
 
         elif 'spark' in queryd:
@@ -448,9 +450,9 @@ class AdpEngine:
             else:
                 print "Drop column filter is set to %s filtering ..." %cfilterparse(self.dfilter)
                 if m:
-                    self.dformat.dropColumns(self, df, cfilterparse(self.dfilter), cp=False)
+                    self.dformat.dropColumns(df, cfilterparse(self.dfilter), cp=False)
                 else:
-                    df = self.dformat.dropColumns(self, df, cfilterparse(self.dfilter), cp=True)
+                    df = self.dformat.dropColumns(df, cfilterparse(self.dfilter))
         return df
 
     def trainMethod(self):
@@ -729,8 +731,8 @@ class AdpEngine:
         # per slave unique process name list
         nodeProcessReduce = {}
         nodeProcessMap = {}
-        lRD = []
-        lMP = []
+        lRD = {}
+        lMP = {}
         checkpoint = str2Bool(self.checkpoint)
         print "Querying  Mapper and Reducer metrics ..."
         logger.info('[%s] : [INFO] Querying  Mapper and Reducer metrics ...',
@@ -772,7 +774,8 @@ class AdpEngine:
                     if not checkpoint:
                         self.dformat.dict2csv(ghreduce, qhreduce, hreduce_file)
                     else:
-                        lRD.append(self.dformat.dict2csv(ghreduce, qhreduce, hreduce_file, df=checkpoint))
+                        # lRD.append(self.dformat.dict2csv(ghreduce, qhreduce, hreduce_file, df=checkpoint))
+                        lRD[process] = self.dformat.dict2csv(ghreduce, qhreduce, hreduce_file, df=checkpoint)
             else:
                 logger.info('[%s] : [INFO] No reduce process for host  %s found',
                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), host)
@@ -796,7 +799,8 @@ class AdpEngine:
                     if not checkpoint:
                         self.dformat.dict2csv(ghmap, qhmap, hmap_file)
                     else:
-                        lMP.append(self.dformat.dict2csv(ghmap, qhmap, hmap_file, df=checkpoint))
+                        # lMP.append(self.dformat.dict2csv(ghmap, qhmap, hmap_file, df=checkpoint))
+                        lMP[process] = self.dformat.dict2csv(ghmap, qhmap, hmap_file, df=checkpoint)
             else:
                 logger.info('[%s] : [INFO] No map process for host  %s found',
                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), host)
