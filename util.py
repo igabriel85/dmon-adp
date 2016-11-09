@@ -137,6 +137,39 @@ def rfilterparse(filter):
     return ld, gd
 
 
+def assertFrameEqual(df1, df2, **kwds):
+    """ Assert that two dataframes are equal, ignoring ordering of columns"""
+    from pandas.util.testing import assert_frame_equal
+    return assert_frame_equal(df1.fillna(1).sort_index(axis=1), df2.fillna(1).sort_index(axis=1), check_names=True, **kwds)
+
+
+def testDF(dataDir, csv1, csv2):
+    '''
+    :param dataDir: -> data directory
+    :param csv1: -> input csv1
+    :param csv2: -> input csv2
+    :return:
+    '''
+    test1 = pd.read_csv(os.path.join(dataDir, csv1))
+    test2 = pd.read_csv(os.path.join(dataDir, csv2))
+
+    print len(set(test1.columns.values))
+    print len(set(test2.columns.values))
+    A = set(pd.read_csv(os.path.join(dataDir, csv1), index_col=False, header=None)[
+                0])  # reads the csv, takes only the first column and creates a set out of it.
+    B = set(pd.read_csv(os.path.join(dataDir, csv2), index_col=False, header=None)[0])  # same here
+    print(A - B)  # set A - set B gives back everything thats only in A.
+    print(B - A)
+    t1 = test1.sort_index(axis=1)
+    t2 = test2.sort_index(axis=1)
+
+    t1.to_csv(os.path.join(dataDir, 'cTest1.csv'))
+    t2.to_csv(os.path.join(dataDir, 'cTest2.csv'))
+    if t1.equals(t2):
+        print "DF's are equal"
+    else:
+        print "DF's are not equal"
+
 # testcsv = "/Users/Gabriel/Documents/workspaces/diceWorkspace/dmon-adp/data/JVM_NM_dice.cdh.slave1.csv"
 #
 # print csvheaders2colNames(testcsv, 'slave1')
