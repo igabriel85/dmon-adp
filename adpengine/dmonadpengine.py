@@ -453,6 +453,7 @@ class AdpEngine:
                     self.dformat.dropColumns(df, cfilterparse(self.dfilter), cp=False)
                 else:
                     df = self.dformat.dropColumns(df, cfilterparse(self.dfilter))
+        # self.dformat.fillMissing(df)
         return df
 
     def trainMethod(self):
@@ -514,9 +515,10 @@ class AdpEngine:
             logger.warning('[%s] : [WARN] Detect is set to false, skipping...',
                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(self.detect))
             return 0
-        # use threads
+
 
     def run(self):
+        # todo use threads
         return "run"
 
     def modelName(self, methodname, modelName):
