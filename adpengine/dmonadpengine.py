@@ -45,6 +45,8 @@ class AdpEngine:
         self.stormReturn = 0
         self.yarnReturn = 0
         self.systemReturn = 0
+        self.mapmetrics = 0
+        self.reducemetrics = 0
 
     def initConnector(self):
         print "Establishing connection with dmon ....."
@@ -150,7 +152,7 @@ class AdpEngine:
                 print "Only for all system metrics available" #todo for metrics types
         if 'yarn' in queryd:
             print "Starting query for yarn metrics"
-            if queryd['yarn'] == 0:
+            if queryd['yarn'] == 0: # todo test if it works
                 # per slave unique process name list
                 nodeProcessReduce = {}
                 nodeProcessMap = {}
@@ -159,6 +161,8 @@ class AdpEngine:
                 lNMJvm = []
                 lShuffle = []
                 lDataNode = []
+                lmap = []
+                lreduce = []
                 for node in desNodes:
                     nodeManager, nodeManager_file = self.qConstructor.nodeManagerString(node)
                     jvmNodeManager, jvmNodeManager_file = self.qConstructor.jvmnodeManagerString(node)
@@ -238,7 +242,10 @@ class AdpEngine:
                             hreduce, hreduce_file = self.qConstructor.jvmRedProcessbyNameString(host, process)
                             qhreduce = self.qConstructor.jvmNNquery(hreduce, self.tfrom, self.to, self.qsize, self.qinterval)
                             ghreduce = self.dmonConnector.aggQuery(qhreduce)
-                            self.dformat.dict2csv(ghreduce, qhreduce, hreduce_file)
+                            if not checkpoint:
+                                self.dformat.dict2csv(ghreduce, qhreduce, hreduce_file)
+                            else:
+                                lreduce.append(self.dformat.dict2csv(ghreduce, qhreduce, hreduce_file, df=checkpoint))
                     else:
                         logger.info('[%s] : [INFO] No reduce process for host  %s found',
                                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), host)
@@ -253,7 +260,10 @@ class AdpEngine:
                             hmap, hmap_file = self.qConstructor.jvmMapProcessbyNameString(host, process)
                             qhmap = self.qConstructor.jvmNNquery(hmap, self.tfrom, self.to, self.qsize, self.qinterval)
                             ghmap = self.dmonConnector.aggQuery(qhmap)
-                            self.dformat.dict2csv(ghmap, qhmap, hmap_file)
+                            if not checkpoint:
+                                self.dformat.dict2csv(ghmap, qhmap, hmap_file)
+                            else:
+                                lmap.append(self.dformat.dict2csv(ghmap, qhmap, hmap_file, df=checkpoint))
                     else:
                         logger.info('[%s] : [INFO] No map process for host  %s found',
                                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), host)
@@ -317,6 +327,10 @@ class AdpEngine:
 
                     final_merge = self.dformat.mergeFinal()
                     self.dformat.df2csv(final_merge, os.path.join(self.dataDir, 'Final_Merge.csv'))
+                    logger.info('[%s] : [INFO] Yarn metrics merge complete',
+                                datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+                    print "Yarn metrics merge complete"
+                    self.yarnReturn = 0
                 else:
                    df_dfs = self.dformat.dict2csv(gdfs, qdfs, dfs_file, df=checkpoint)
                    df_dfsFs = self.dformat.dict2csv(gdfsFs, qdfsFs, dfsFs_file, df=checkpoint)
@@ -329,17 +343,21 @@ class AdpEngine:
                    merged_DFS = self.dformat.chainMergeDFS(dfs=df_dfs, dfsfs=df_dfsFs, fsop=df_fsop)
                    merged_cluster = self.dformat.chainMergeCluster(clusterMetrics=df_cluster, queue=df_queue,
                                                                    jvmRM=df_jvmResourceManager, jvmmrapp=df_jvmMrapp)
-                   merge_nodemanager , jvmNode_manager= self.dformat.chainMergeNM(lNM=lNM, lNMJvm=lNMJvm, lShuffle=lShuffle)
+                   merge_nodemanager, jvmNode_manager, mShuffle= self.dformat.chainMergeNM(lNM=lNM, lNMJvm=lNMJvm, lShuffle=lShuffle)
                    datanode_merge = self.dformat.chainMergeDN(lDN=lDataNode)
                    df_jvmNameNode = self.dformat.dict2csv(gjvmNameNode, qjvmNameNode, jvmNameNode_file, df=checkpoint)
-
-
-                    # TODO add merge
-
+                   final_merge = self.dformat.mergeFinal(dfs=merged_DFS, cluster=merged_cluster, nodeMng=merge_nodemanager,
+                                                         jvmnodeMng=jvmNode_manager, dataNode=datanode_merge,
+                                                         jvmNameNode=df_jvmNameNode, shuffle=mShuffle,
+                                                         system=self.systemReturn)
+                   self.dformat.df2csv(final_merge, os.path.join(self.dataDir, 'cTest.csv'))
+                   self.yarnReturn = final_merge
                 logger.info('[%s] : [INFO] Yarn metrics merge complete',
                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
                 print "Yarn metrics merge complete"
-                self.yarnReturn = 0
+                self.yarnReturn = final_merge
+                self.mapmetrics = lmap
+                self.reducemetrics = lreduce
             else:
                 # cluster, nn, nm, dfs, dn, mr
                 mCluster = mNameNode = mNodeManager = mNodeManagerJVM = mShuffle = mDFS = mDataNode = mMap = mReduce = 0
@@ -370,6 +388,8 @@ class AdpEngine:
                                                       jvmNameNode=mNameNode, shuffle=mShuffle, system=self.systemReturn)
                 self.dformat.df2csv(final_merge, os.path.join(self.dataDir, 'cTest.csv'))
                 self.yarnReturn = final_merge
+                self.reducemetrics = mReduce
+                self.mapmetrics = mMap
             print "Finished query and merge for yarn metrics"
 
         elif 'spark' in queryd:
@@ -379,7 +399,7 @@ class AdpEngine:
             print "Storm metrics" #todo
             self.stormReturn = 0
 
-        return self.yarnReturn, self.sparkReturn, self.stormReturn
+        return self.yarnReturn, self.reducemetrics, self.mapmetrics, self.sparkReturn, self.stormReturn
 
     def filterData(self, df, m=False):
         '''
@@ -653,7 +673,6 @@ class AdpEngine:
         logger.info('[%s] : [INFO] Querying  Name Node metrics complete',
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
         return returnNN
-
 
     def getCluster(self):
         print "Querying  Cluster metrics ..."
