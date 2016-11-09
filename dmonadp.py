@@ -451,8 +451,12 @@ def main(argv):
 
     engine = dmonadpengine.AdpEngine(settings, dataDir=dataDir, modelsDir=modelsDir)
     engine.initConnector()
-    yarnReturn, reducemetrics, mapmetrics, sparkReturn, stormReturn = engine.getData()
+    systemReturn, yarnReturn, reducemetrics, mapmetrics, sparkReturn, stormReturn = engine.getData()
+
     filtered_df = engine.filterData(yarnReturn)
+    filtered_df.to_csv(os.path.join(dataDir, 'ctest2.csv'), index=False)
+    test = systemReturn.set_index('key')
+    print test.to_dict()
     engine.trainMethod()
     engine.detectAnomalies()
     # engine.printTest()

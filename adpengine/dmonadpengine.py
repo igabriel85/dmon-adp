@@ -122,6 +122,7 @@ class AdpEngine:
                     gmemoryResponse = self.dmonConnector.aggQuery(qmemory)
                     ginterfaceResponse = self.dmonConnector.aggQuery(qinterface)
                     gpacketResponse = self.dmonConnector.aggQuery(qpacket)
+
                     if not checkpoint:
                         self.dformat.dict2csv(ginterfaceResponse, qinterface, interface_file)
                         self.dformat.dict2csv(gmemoryResponse, qmemory, memory_file)
@@ -401,7 +402,7 @@ class AdpEngine:
             print "Storm metrics" #todo
             self.stormReturn = 0
 
-        return self.yarnReturn, self.reducemetrics, self.mapmetrics, self.sparkReturn, self.stormReturn
+        return self.systemReturn, self.yarnReturn, self.reducemetrics, self.mapmetrics, self.sparkReturn, self.stormReturn
 
     def filterData(self, df, m=False):
         '''
@@ -515,7 +516,6 @@ class AdpEngine:
             logger.warning('[%s] : [WARN] Detect is set to false, skipping...',
                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(self.detect))
             return 0
-
 
     def run(self):
         # todo use threads
