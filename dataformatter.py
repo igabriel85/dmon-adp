@@ -97,6 +97,12 @@ class DataFormatter:
                 sys.exit(1)
             return 0
 
+    def fillMissing(self, df):
+        df.fillna(0)
+
+    def dropMissing(self, df):
+        df.dropna(axis=1, how='all', inplace=True)
+
     def merge(self, csvOne, csvTwo, merged):
         '''
         :param csvOne: first csv to load
@@ -289,8 +295,8 @@ class DataFormatter:
         '''
         # dataFrame.set_index('key', inplace=True) -> if inplace it modifies all copies of df including
         # in memory resident ones
-        dataFrame.set_index('key')
-        dataFrame.to_csv(mergedFile)
+        kDF = dataFrame.set_index('key')
+        kDF.to_csv(mergedFile)
 
     def chainMergeSystem(self, linterface=None, lload=None, lmemory=None, lpack=None):
         logger.info('[%s] : [INFO] Startig system metrics merge .......',
@@ -367,6 +373,7 @@ class DataFormatter:
         merged_df = self.listMerge(lFile)
         merged_df.sort_index(axis=1, inplace=True)
         # merged_df.set_index('key', inplace=True)
+        self.dformat.dropMissing(merged_df)
         return merged_df
 
     def dict2csv(self, response, query, filename, df=False):
