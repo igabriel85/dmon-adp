@@ -144,17 +144,36 @@ class AdpPoint:
         for hit in s['hits']['hits']:
             print('%s: %s' % (hit['_id'], hit['_source']['state']))
 
-    def detanoload(self):
-        return "anomalyload"
-
-    def detanomemory(self):
-        return "anomalymemory"
-
-    def detanointerface(self):
-        return "anomalyinterface"
-
-    def detanopackage(self):
-        return "anomalypacakge"
+    def detpoint(self, data, type, threashold, lt=False):
+        '''
+        :param data: -> json data
+        :param type: -> metric type
+        :param threashold: -> set threashold
+        :param lt: -> less than is set to false then use greather then
+        :return: -> list containing  detected anomalies
+        '''
+        anomalies = []
+        for k, v in data.iteritems():
+            if type in k:
+                for t, vl in v.iteritems():
+                    time = datetime.datetime.fromtimestamp(t / 1000).strftime('%Y-%m-%d %H:%M:%S')
+                    if lt:
+                        if vl > threashold:
+                            print "Found anomaly for %s at %s with value %f" % (k, time, vl)
+                            logger.info('[%s] : [INFO] Found anomaly for %s at %s with value %f!',
+                                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), k, time, vl)
+                            anomalies.append(
+                                {"type": "point", "metric": k, "time": time, "value": vl, "threashold": threashold,
+                                     "threashold_type": "upper"})
+                    else:
+                        if vl < threashold:
+                            print "Found anomaly for %s at %s with value %f" % (k, t, vl)
+                            anomalies.append(
+                                    {"type": "point", "metric": k, "time": time, "value": vl, "threashold": threashold,
+                                     "threashold_type": "lower"})
+                            logger.info('[%s] : [INFO] Found anomaly for %s at %s with value %f!',
+                                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), k, time, vl)
+        return anomalies
 
 
 if __name__ == '__main__':

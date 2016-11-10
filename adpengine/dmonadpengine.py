@@ -1,6 +1,7 @@
 import os
 from dmonconnector import *
-from util import queryParser, nodesParse, str2Bool, cfilterparse, rfilterparse
+from dmonpoint import *
+from util import queryParser, nodesParse, str2Bool, cfilterparse, rfilterparse, pointThraesholds
 import pandas as pd
 
 
@@ -8,6 +9,7 @@ class AdpEngine:
     def __init__(self, settingsDict, dataDir, modelsDir):
         self.esendpoint = settingsDict['esendpoint']
         self.esInstanceEndpoint = settingsDict['esInstanceEndpoint']
+        self.adppoint = AdpPoint(settingsDict['esendpoint'])
         self.dmonPort = settingsDict['dmonPort']
         self.index = settingsDict['index']
         self.tfrom = int(settingsDict['from'])
@@ -41,6 +43,7 @@ class AdpEngine:
         self.rfilter = settingsDict['rfilter']
         self.dfilter = settingsDict['dfilter']
         self.checkpoint = settingsDict['checkpoint']
+        self.desiredNodesList = []
         self.sparkReturn = 0
         self.stormReturn = 0
         self.yarnReturn = 0
@@ -76,17 +79,14 @@ class AdpEngine:
         print "Checking dmon registered nodes...."
         self.regnodeList = self.dmonConnector.getNodeList()
         print "Nodes found -> %s" %self.regnodeList
+        self.desiredNodesList = self.getDesiredNodes()
 
-    def getData(self):
-        queryd = queryParser(self.query)
-        logger.info('[%s] : [INFO] Checking node list',
-                           datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
-        checkpoint = str2Bool(self.checkpoint)
+    def getDesiredNodes(self):
         desNodes = []
         if not self.nodes:
             desNodes = self.dmonConnector.getNodeList()
             logger.info('[%s] : [INFO] Metrics from all nodes will be collected ',
-                           datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
         else:
             if set(self.nodes).issubset(set(self.regnodeList)):
                 desNodes = self.nodes
@@ -94,8 +94,17 @@ class AdpEngine:
                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(desNodes))
             else:
                 logger.error('[%s] : [ERROR] Registred nodes %s do not contain desired nodes %s ',
-                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(self.regnodeList), str(desNodes))
+                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(self.regnodeList),
+                             str(desNodes))
                 sys.exit(1)
+        return desNodes
+
+    def getData(self):
+        queryd = queryParser(self.query)
+        logger.info('[%s] : [INFO] Checking node list',
+                           datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        checkpoint = str2Bool(self.checkpoint)
+        desNodes = self.desiredNodesList
 
         if 'system' in queryd:
             if queryd['system'] == 0:
@@ -485,6 +494,59 @@ class AdpEngine:
                                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
             return 0
 
+    def detectPointAnomalies(self):
+        loadth = pointThraesholds(self.sload)
+        networkth = pointThraesholds(self.snetwork)
+        memoryth = pointThraesholds(self.smemory)
+        all = [loadth, networkth, memoryth]
+
+        lload = []
+        lmemory = []
+        linterface = []
+        lpack = []
+
+        for node in self.desiredNodesList:
+            load, load_file = self.qConstructor.loadString(node)
+            memory, memory_file = self.qConstructor.memoryString(node)
+            interface, interface_file = self.qConstructor.interfaceString(node)
+            packet, packet_file = self.qConstructor.packetString(node)
+
+            # Queries
+            qload = self.qConstructor.systemLoadQuery(load, self.tfrom, self.to, self.qsize, self.qinterval)
+            qmemory = self.qConstructor.systemMemoryQuery(memory, self.tfrom, self.to, self.qsize, self.qinterval)
+            qinterface = self.qConstructor.systemInterfaceQuery(interface, self.tfrom, self.to, self.qsize,
+                                                                self.qinterval)
+            qpacket = self.qConstructor.systemInterfaceQuery(packet, self.tfrom, self.to, self.qsize, self.qinterval)
+
+            # Execute query and convert response to csv
+            qloadResponse = self.dmonConnector.aggQuery(qload)
+            gmemoryResponse = self.dmonConnector.aggQuery(qmemory)
+            ginterfaceResponse = self.dmonConnector.aggQuery(qinterface)
+            gpacketResponse = self.dmonConnector.aggQuery(qpacket)
+
+            linterface.append(self.dformat.dict2csv(ginterfaceResponse, qinterface, interface_file, df=True))
+            lmemory.append(self.dformat.dict2csv(gmemoryResponse, qmemory, memory_file, df=True))
+            lload.append(self.dformat.dict2csv(qloadResponse, qload, load_file, df=True))
+            lpack.append(self.dformat.dict2csv(gpacketResponse, qpacket, packet_file, df=True))
+
+            df_interface, df_load, df_memory, df_packet = self.dformat.chainMergeSystem(linterface=linterface,
+                                                                                        lload=lload, lmemory=lmemory,
+                                                                                        lpack=lpack)
+            df_system = self.dformat.chainMergeNR(interface=df_interface, memory=df_memory,
+                                                  load=df_load, packets=df_packet)
+            dict_system = self.dformat.df2dict(df_system)
+
+            for th in all:
+                for type, val in th.iteritems():
+                    if val['bound'] == 'gd':
+                        anomalies = self.adppoint.detpoint(dict_system, type=type, threashold=val['threashold'], lt=False)
+                        for a in anomalies:
+                            self.reportAnomaly(a)
+                    else:
+                        anomalies = self.adppoint.detpoint(dict_system, type=type, threashold=val['threashold'], lt=True)
+                        for a in anomalies:
+                            self.reportAnomaly(a)
+
     def detectAnomalies(self):
         if str2Bool(self.detect):
             if self.type == 'clustering':
@@ -536,8 +598,8 @@ class AdpEngine:
     def compareModel(self):
         return "Compare models"
 
-    def reportAnomaly(self):
-        return "anomaly"
+    def reportAnomaly(self, body):
+        self.dmonConnector.pushAnomaly(anomalyIndex=self.anomalyIndex, doc_type='anomaly', body=body)
 
     def getDFS(self):
         # Query Strings
