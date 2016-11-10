@@ -149,7 +149,13 @@ class Connector:
         return res
 
     def pushAnomaly(self, anomalyIndex, doc_type, body):
-        res = self.esInstance.index(index=anomalyIndex, doc_type=doc_type, body=body)
+        try:
+            res = self.esInstance.index(index=anomalyIndex, doc_type=doc_type, body=body)
+        except Exception as inst:
+            logger.error('[%s] : [ERROR] Exception has occured while pushing anomaly with type %s at arguments %s',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+            print "Can't push anomaly to dmon!"
+            sys.exit(2)
         return res
 
     def getModel(self):
@@ -224,8 +230,6 @@ if __name__ == '__main__':
     qlte = 1477562100000
     qsize = 0
     qinterval = "10s"
-
-
 
     dmonConnector = Connector('85.120.206.27')
     qConstructor = QueryConstructor()

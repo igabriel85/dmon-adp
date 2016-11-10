@@ -76,6 +76,9 @@ def nodesParse(nodes):
 
 
 def getModelList():
+    '''
+    :return: -> returns the current list of saved models
+    '''
     onlyfiles = [f for f in listdir(modelDir) if isfile(join(modelDir, f))]
     return onlyfiles
 
@@ -170,6 +173,25 @@ def testDF(dataDir, csv1, csv2):
     else:
         print "DF's are not equal"
 
+
+def pointThraesholds(thresholds):
+    '''
+    :param thresholds: -> string that defines threashold for system metrics
+    :return: -> dictionary with parsed thresholds
+    '''
+    th = {}
+    for el in thresholds.split(';'):
+        th[el.split(':')[0]] = {'bound': el.split(':')[1], 'threashold': el.split(':')[2]}
+    return th
+
+
+
+# testLoad = 'shortterm:gd:2.0;midterm:ld:0.1;longterm:gd:1.0'
+# print pointThraesholds(testLoad)
+# testNetwork = 'tx:gd:34344;rx:ld:323434'
+# print pointThraesholds(testNetwork)
+# testMemory = 'cached:gd:231313;buffered:ld:312123;used:ld:12313;free:gd:23123'
+# print pointThraesholds(testMemory)
 # testcsv = "/Users/Gabriel/Documents/workspaces/diceWorkspace/dmon-adp/data/JVM_NM_dice.cdh.slave1.csv"
 #
 # print csvheaders2colNames(testcsv, 'slave1')
