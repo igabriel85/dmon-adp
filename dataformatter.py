@@ -373,7 +373,7 @@ class DataFormatter:
         merged_df = self.listMerge(lFile)
         merged_df.sort_index(axis=1, inplace=True)
         # merged_df.set_index('key', inplace=True)
-        self.dformat.dropMissing(merged_df)
+        self.dropMissing(merged_df)
         return merged_df
 
     def dict2csv(self, response, query, filename, df=False):
@@ -462,6 +462,10 @@ class DataFormatter:
             logger.info('[%s] : [INFO] Created dataframe  %s',
                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
             return df
+
+    def df2dict(self, df):
+        kdf = df.set_index('key')
+        print kdf.to_dict()
 
     def dict2arff(self, fileIn, fileOut):
         '''
