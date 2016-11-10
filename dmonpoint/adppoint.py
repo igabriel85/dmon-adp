@@ -4,7 +4,6 @@ from adplogger import logger
 from datetime import datetime
 from random import randint
 import time
-from time import sleep
 
 
 class AdpPoint:
@@ -156,23 +155,23 @@ class AdpPoint:
         for k, v in data.iteritems():
             if type in k:
                 for t, vl in v.iteritems():
-                    time = datetime.datetime.fromtimestamp(t / 1000).strftime('%Y-%m-%d %H:%M:%S')
+                    times = datetime.fromtimestamp(t / 1000).strftime('%Y-%m-%d %H:%M:%S')
                     if lt:
                         if vl > threashold:
-                            print "Found anomaly for %s at %s with value %f" % (k, time, vl)
+                            print "Found anomaly for %s at %s with value %f" % (k, times, vl)
                             logger.info('[%s] : [INFO] Found anomaly for %s at %s with value %f!',
-                                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), k, time, vl)
+                                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), k, times, vl)
                             anomalies.append(
-                                {"type": "point", "metric": k, "time": time, "value": vl, "threashold": threashold,
+                                {"type": "point", "metric": k, "time": times, "value": vl, "threashold": threashold,
                                      "threashold_type": "upper"})
                     else:
                         if vl < threashold:
                             print "Found anomaly for %s at %s with value %f" % (k, t, vl)
                             anomalies.append(
-                                    {"type": "point", "metric": k, "time": time, "value": vl, "threashold": threashold,
+                                    {"type": "point", "metric": k, "time": times, "value": vl, "threashold": threashold,
                                      "threashold_type": "lower"})
                             logger.info('[%s] : [INFO] Found anomaly for %s at %s with value %f!',
-                                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), k, time, vl)
+                                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), k, times, vl)
         return anomalies
 
 

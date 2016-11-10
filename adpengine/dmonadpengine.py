@@ -1,9 +1,10 @@
 import os
 from dmonconnector import *
 from dmonpoint import *
-from util import queryParser, nodesParse, str2Bool, cfilterparse, rfilterparse, pointThraesholds
+from util import queryParser, nodesParse, str2Bool, cfilterparse, rfilterparse, pointThraesholds, parseDelay
 import pandas as pd
-
+from threadRun import AdpDetectThread, AdpPointThread, AdpTrainThread
+from time import sleep
 
 class AdpEngine:
     def __init__(self, settingsDict, dataDir, modelsDir):
@@ -43,6 +44,8 @@ class AdpEngine:
         self.rfilter = settingsDict['rfilter']
         self.dfilter = settingsDict['dfilter']
         self.checkpoint = settingsDict['checkpoint']
+        self.interval = settingsDict['interval']
+        self.delay = settingsDict['delay']
         self.desiredNodesList = []
         self.sparkReturn = 0
         self.stormReturn = 0
@@ -472,9 +475,14 @@ class AdpEngine:
             if self.type == 'clustering':
                 if self.method in self.allowedMethodsClustering:
                     print "Training with selected method %s of type %s" % (self.method, self.type)
+                    print "Getting data ..."
+                    systemReturn, yarnReturn, reducemetrics, mapmetrics, sparkReturn, stormReturn = self.getData()
                     print "Method %s settings detected -> %s" % (self.method, str(self.methodSettings))
                     print "Saving model with name %s" % self.modelName(self.method, self.export)
                     # TODO: dweka instance for training selected method with parameters
+
+                    # Once training finished set training to false
+                    self.train = False
                     return self.modelName(self.method, self.export)
                 else:
                     logger.error('[%s] : [ERROR] Unknown method %s of type %s ',
@@ -496,56 +504,76 @@ class AdpEngine:
 
     def detectPointAnomalies(self):
         loadth = pointThraesholds(self.sload)
+        if not loadth:
+            loadth = {'shortterm': {'threashold': '4.5', 'bound': 'gd'},
+                      'longterm': {'threashold': '3.0', 'bound': 'gd'}, 'midterm': {'threashold': '3.5', 'bound': 'gd'}}
+            logger.warning('[%s] : [WARN] Using default values for point anomaly load',
+                           datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
         networkth = pointThraesholds(self.snetwork)
+        if not loadth:
+            networkth = {'rx': {'threashold': '1000000000', 'bound': 'gd'},
+                         'tx': {'threashold': '1000000000', 'bound': 'gd'}}
+            logger.warning('[%s] : [WARN] Using default values for point anomaly network',
+                           datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
         memoryth = pointThraesholds(self.smemory)
+        if not memoryth:
+            memoryth = {'cached': {'threashold': '231313', 'bound': 'gd'},
+                        'buffered': {'threashold': '200000000', 'bound': 'gd'},
+                        'used': {'threashold': '1000000000', 'bound': 'gd'},
+                        'free': {'threashold': '100000000', 'bound': 'ld'}}
+            logger.warning('[%s] : [WARN] Using default values for point anomaly memory',
+                           datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
         all = [loadth, networkth, memoryth]
+        while True:
+            lload = []
+            lmemory = []
+            linterface = []
+            lpack = []
+            tfrom = "now-30s"
+            to = "now"
+            for node in self.desiredNodesList:
+                load, load_file = self.qConstructor.loadString(node)
+                memory, memory_file = self.qConstructor.memoryString(node)
+                interface, interface_file = self.qConstructor.interfaceString(node)
+                packet, packet_file = self.qConstructor.packetString(node)
 
-        lload = []
-        lmemory = []
-        linterface = []
-        lpack = []
+                # Queries
+                qload = self.qConstructor.systemLoadQuery(load, tfrom, to, self.qsize, self.qinterval)
+                qmemory = self.qConstructor.systemMemoryQuery(memory, tfrom, to, self.qsize, self.qinterval)
+                qinterface = self.qConstructor.systemInterfaceQuery(interface, tfrom, to, self.qsize,
+                                                                    self.qinterval)
+                qpacket = self.qConstructor.systemInterfaceQuery(packet, tfrom, to, self.qsize, self.qinterval)
 
-        for node in self.desiredNodesList:
-            load, load_file = self.qConstructor.loadString(node)
-            memory, memory_file = self.qConstructor.memoryString(node)
-            interface, interface_file = self.qConstructor.interfaceString(node)
-            packet, packet_file = self.qConstructor.packetString(node)
+                # Execute query and convert response to csv
+                qloadResponse = self.dmonConnector.aggQuery(qload)
+                gmemoryResponse = self.dmonConnector.aggQuery(qmemory)
+                ginterfaceResponse = self.dmonConnector.aggQuery(qinterface)
+                gpacketResponse = self.dmonConnector.aggQuery(qpacket)
 
-            # Queries
-            qload = self.qConstructor.systemLoadQuery(load, self.tfrom, self.to, self.qsize, self.qinterval)
-            qmemory = self.qConstructor.systemMemoryQuery(memory, self.tfrom, self.to, self.qsize, self.qinterval)
-            qinterface = self.qConstructor.systemInterfaceQuery(interface, self.tfrom, self.to, self.qsize,
-                                                                self.qinterval)
-            qpacket = self.qConstructor.systemInterfaceQuery(packet, self.tfrom, self.to, self.qsize, self.qinterval)
+                linterface.append(self.dformat.dict2csv(ginterfaceResponse, qinterface, interface_file, df=True))
+                lmemory.append(self.dformat.dict2csv(gmemoryResponse, qmemory, memory_file, df=True))
+                lload.append(self.dformat.dict2csv(qloadResponse, qload, load_file, df=True))
+                lpack.append(self.dformat.dict2csv(gpacketResponse, qpacket, packet_file, df=True))
 
-            # Execute query and convert response to csv
-            qloadResponse = self.dmonConnector.aggQuery(qload)
-            gmemoryResponse = self.dmonConnector.aggQuery(qmemory)
-            ginterfaceResponse = self.dmonConnector.aggQuery(qinterface)
-            gpacketResponse = self.dmonConnector.aggQuery(qpacket)
-
-            linterface.append(self.dformat.dict2csv(ginterfaceResponse, qinterface, interface_file, df=True))
-            lmemory.append(self.dformat.dict2csv(gmemoryResponse, qmemory, memory_file, df=True))
-            lload.append(self.dformat.dict2csv(qloadResponse, qload, load_file, df=True))
-            lpack.append(self.dformat.dict2csv(gpacketResponse, qpacket, packet_file, df=True))
-
-            df_interface, df_load, df_memory, df_packet = self.dformat.chainMergeSystem(linterface=linterface,
-                                                                                        lload=lload, lmemory=lmemory,
-                                                                                        lpack=lpack)
-            df_system = self.dformat.chainMergeNR(interface=df_interface, memory=df_memory,
-                                                  load=df_load, packets=df_packet)
-            dict_system = self.dformat.df2dict(df_system)
-
-            for th in all:
-                for type, val in th.iteritems():
-                    if val['bound'] == 'gd':
-                        anomalies = self.adppoint.detpoint(dict_system, type=type, threashold=val['threashold'], lt=False)
-                        for a in anomalies:
-                            self.reportAnomaly(a)
-                    else:
-                        anomalies = self.adppoint.detpoint(dict_system, type=type, threashold=val['threashold'], lt=True)
-                        for a in anomalies:
-                            self.reportAnomaly(a)
+                df_interface, df_load, df_memory, df_packet = self.dformat.chainMergeSystem(linterface=linterface,
+                                                                                            lload=lload, lmemory=lmemory,
+                                                                                            lpack=lpack)
+                df_system = self.dformat.chainMergeNR(interface=df_interface, memory=df_memory,
+                                                      load=df_load, packets=df_packet)
+                dict_system = self.dformat.df2dict(df_system)
+                # print dict_system
+                for th in all:
+                    for type, val in th.iteritems():
+                        if val['bound'] == 'gd':
+                            anomalies = self.adppoint.detpoint(dict_system, type=type, threashold=val['threashold'], lt=False)
+                            for a in anomalies:
+                                self.reportAnomaly(a)
+                                sleep(parseDelay(self.delay))
+                        else:
+                            anomalies = self.adppoint.detpoint(dict_system, type=type, threashold=val['threashold'], lt=True)
+                            for a in anomalies:
+                                self.reportAnomaly(a)
+                                sleep(parseDelay(self.delay))
 
     def detectAnomalies(self):
         if str2Bool(self.detect):
@@ -557,29 +585,64 @@ class AdpEngine:
                         # TODO load trained model and start detection using dweka selected method and qinterval
                     else:
                         logger.error('[%s] : [ERROR] Model %s not found at %s ',
-                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.load,
-                                     str(os.path.join(self.modelsDir, self.modelName(self.method, self.load))))
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.load,
+                                 str(os.path.join(self.modelsDir, self.modelName(self.method, self.load))))
                         sys.exit(1)
                 else:
                     print "Unknown method %s of type %s" % (self.method, self.type)
                     logger.error('[%s] : [ERROR] Unknown method %s of type %s ',
-                                 datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.method,
-                                 self.type)
+                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.method,
+                             self.type)
                     sys.exit(1)
             elif self.type == 'classification':
                 print "Not yet supported!"  # TODO
                 sys.exit(0)
             else:
                 logger.error('[%s] : [ERROR] Unknown type %s ',
-                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.type)
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.type)
                 sys.exit(1)
         else:
             print "Detect is set to false, skipping..."
             logger.warning('[%s] : [WARN] Detect is set to false, skipping...',
-                           datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(self.detect))
-            return 0
+                       datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(self.detect))
+        sleep(parseDelay(self.interval))
+        print parseDelay(self.interval)
 
-    def run(self):
+    def run(self, engine):
+        try:
+            threadPoint = AdpPointThread(engine, 'Thread Point')
+            # threadTrain = AdpTrainThread(engine, 'Thread Train')
+            # threadDetect = AdpDetectThread(engine, 'Thread Detect')
+
+            threadPoint.start()
+            # threadTrain.start()
+            # threadDetect.start()
+        except Exception as inst:
+            logger.error('[%s] : [ERROR] Exception %s with %s during point thread execution, halting',
+                           datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+            sys.exit(1)
+
+        # try:
+        #     # thread.start_new_thread(self.detectPointAnomalies(delayPoint))
+        #     thread.start_new_thread(self.trainMethod())
+        #     sys.exit()
+        #     # thread.start_new_thread(self.detectAnomalies(delapyComplex))
+        # except Exception as inst:
+        #     logger.error('[%s] : [ERROR] Exception %s with %s during train thread execution, halting',
+        #                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst),
+        #                          inst.args)
+        #     sys.exit(1)
+        #
+        # try:
+        #     # thread.start_new_thread(self.detectPointAnomalies(delayPoint))
+        #     # thread.start_new_thread(self.trainMethod())
+        #     thread.start_new_thread(self.detectAnomalies(delapyComplex))
+        # except Exception as inst:
+        #     logger.error('[%s] : [ERROR] Exception %s with %s during detect thread execution, halting',
+        #                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst),
+        #                          inst.args)
+        #     sys.exit(1)
+
         # todo use threads
         return "run"
 
@@ -912,12 +975,17 @@ class AdpEngine:
             print "Data Node metrics merge complete"
             return dn_merged
 
-
-
     def printTest(self):
         print "Endpoint -> %s" %self.esendpoint
         print "Method settings -> %s" %self.methodSettings
         print "Train -> %s"  % type(self.train)
+
+    def print_time(self, threadName, delay):
+        count = 0
+        while count < 5:
+            time.sleep(delay)
+            count += 1
+            print "%s: %s" % (threadName, time.ctime(time.time()))
 
 
 
