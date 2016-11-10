@@ -23,6 +23,7 @@ from adpconfig import readConf
 from adplogger import logger
 from datetime import datetime
 from adpengine import dmonadpengine
+from util import getModelList, parseDelay
 import time
 
 
@@ -56,7 +57,9 @@ def main(argv):
         "smemory": None,
         "snetwork": None,
         "heap": None,
-        "checkpoint": None
+        "checkpoint": None,
+        "delay": None,
+        "interval": None
     }
 
     # Only for testing
@@ -88,7 +91,9 @@ def main(argv):
         elif opt in ("-d", "--detect"):
             settings["detect"] = arg
         elif opt in ("-l", "--list-models"):
-            print "Return current saved models based on Method"  # TODO
+            print "Current saved models are:\n"
+            print getModelList()
+            sys.exit(0)
         elif opt in ("-q", "--query"):
             settings["query"] = arg
 
@@ -434,12 +439,46 @@ def main(argv):
         except:
             print "Checkpointing not set using default"
             settings["checkpoint"] = "True"
-        logger.info('[%s] : [INFO] Checkpointing is  set to True',
+            logger.info('[%s] : [INFO] Checkpointing is  set to True',
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
     else:
         print "Checkpointing is set to %s" %settings["checkpoint"]
         logger.info('[%s] : [INFO] Checkpointing is  set to %s',
                 datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['checkpoint'])
+
+    if settings["delay"] is None:
+        try:
+            print "Delay is set to %s" %readCnf['Misc']['delay']
+            settings["delay"] = readCnf['Misc']['delay']
+            logger.info('[%s] : [INFO] Delay is  set to %s',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['delay'])
+        except:
+            print "Delay is not set, setting default"
+            settings["delay"] = "2m"
+            logger.info('[%s] : [INFO] Delay is  set to %s',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['delay'])
+    else:
+        print "Delay is set to %s" % settings["delay"]
+        logger.info('[%s] : [INFO] Delay is  set to %s',
+                datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['delay'])
+
+    if settings["interval"] is None:
+        try:
+            print "Interval is set to %s" % readCnf['Misc']['interval']
+            settings["interval"] = readCnf['Misc']['interval']
+            logger.info('[%s] : [INFO] Interval is  set to %s',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['interval'])
+        except:
+            print "Interval is not set, setting default"
+            settings["interval"] = "15m"
+            logger.info('[%s] : [INFO] Interval is  set to %s',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['interval'])
+    else:
+        print "Interval is set to %s" % settings["interval"]
+        logger.info('[%s] : [INFO] Interval is  set to %s',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['interval'])
+
+
 
     #if settings["esendpoint"] == None:
 
@@ -451,14 +490,15 @@ def main(argv):
 
     engine = dmonadpengine.AdpEngine(settings, dataDir=dataDir, modelsDir=modelsDir)
     engine.initConnector()
-    systemReturn, yarnReturn, reducemetrics, mapmetrics, sparkReturn, stormReturn = engine.getData()
-
-    filtered_df = engine.filterData(yarnReturn)
-    filtered_df.to_csv(os.path.join(dataDir, 'ctest2.csv'), index=False)
-    test = systemReturn.set_index('key')
-    print test.to_dict()
-    engine.trainMethod()
-    engine.detectAnomalies()
+    engine.run(engine)
+    # # systemReturn, yarnReturn, reducemetrics, mapmetrics, sparkReturn, stormReturn = engine.getData()
+    #
+    # filtered_df = engine.filterData(yarnReturn)
+    # filtered_df.to_csv(os.path.join(dataDir, 'ctest2.csv'), index=False)
+    # test = systemReturn.set_index('key')
+    # print test.to_dict()
+    # engine.trainMethod()
+    # engine.detectAnomalies(30)
     # engine.printTest()
 
     print "#" * 100

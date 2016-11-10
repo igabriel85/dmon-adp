@@ -459,13 +459,13 @@ class DataFormatter:
         else:
             df = pd.DataFrame(requiredMetrics)
             # df.set_index('key', inplace=True)
-            logger.info('[%s] : [INFO] Created dataframe  %s',
+            logger.info('[%s] : [INFO] Created dataframe',
                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
             return df
 
     def df2dict(self, df):
         kdf = df.set_index('key')
-        print kdf.to_dict()
+        return kdf.to_dict()
 
     def dict2arff(self, fileIn, fileOut):
         '''

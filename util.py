@@ -117,6 +117,8 @@ def str2Bool(st):
     :param st: -> string to test
     :return: -> if true then returns 1 else 0
     '''
+    if type(st) is bool:
+        return st
     if st in ['True', 'true', '1']:
         return 1
     elif st in ['False', 'false', '0']:
@@ -179,14 +181,45 @@ def pointThraesholds(thresholds):
     :param thresholds: -> string that defines threashold for system metrics
     :return: -> dictionary with parsed thresholds
     '''
+    if thresholds == 'default':
+        return 0
+    if not thresholds:
+        return 0
+    if thresholds == ' ':
+        return 0
     th = {}
     for el in thresholds.split(';'):
         th[el.split(':')[0]] = {'bound': el.split(':')[1], 'threashold': el.split(':')[2]}
     return th
 
+def parseDelay(st):
+    '''
+    :param st: -> string containing delay
+    :return: -> number of seconds
+    '''
+    if 's' == st[-1:]:
+        return int(st[:-1])
+    elif 'm' == st[-1:]:
+        return int(st[:-1])*60
+    elif 'h' == st[-1:]:
+        return int(st[:-1]) * 3600
+    else:
+        return 0
 
+
+# test = '1m'
+# test2 = '1s'
+# test3 = '1h'
+# print parseDelay(test)
+# print parseDelay(test2)
+# print parseDelay(test3)
+# test = True
+# print type(test)
+# print str2Bool(test)
 
 # testLoad = 'shortterm:gd:2.0;midterm:ld:0.1;longterm:gd:1.0'
+# testLoad = 'default'
+# testLoad = ' '
 # print pointThraesholds(testLoad)
 # testNetwork = 'tx:gd:34344;rx:ld:323434'
 # print pointThraesholds(testNetwork)
