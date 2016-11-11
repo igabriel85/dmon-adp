@@ -23,6 +23,7 @@ import os
 import csv
 import pandas as pd
 from datetime import datetime
+import time
 
 
 modelDir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
@@ -193,6 +194,7 @@ def pointThraesholds(thresholds):
         th[el.split(':')[0]] = {'bound': el.split(':')[1], 'threashold': el.split(':')[2]}
     return th
 
+
 def parseDelay(st):
     '''
     :param st: -> string containing delay
@@ -207,8 +209,37 @@ def parseDelay(st):
     else:
         return 0
 
+
 def ut2hum(ut):
     return datetime.fromtimestamp(ut / 1000).strftime('%Y-%m-%d %H:%M:%S')
+
+
+def parseMethodSettings(st):
+    if st == 'default':
+        return 0
+    mSettings = []
+    for k, v in st.iteritems():
+        if len(k) > 1:
+            ak = k
+        else:
+            ak = k.upper()
+        mSettings.append("-%s" % ak)
+        mSettings.append(v)
+    return mSettings
+
+
+def wait4Model(count):
+    if count < 10:
+        time.sleep(1)
+        count += 1
+        print count
+        return wait4Model(count)
+    print "Done"
+
+# wait4Model(0)
+
+# test = {'s': '10', 'n': '10'}
+# print parseMethodSettings(test)
 # test = '1m'
 # test2 = '1s'
 # test3 = '1h'

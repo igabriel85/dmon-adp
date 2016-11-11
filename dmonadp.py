@@ -25,6 +25,10 @@ from datetime import datetime
 from adpengine import dmonadpengine
 from util import getModelList, parseDelay
 import time
+from dmonweka import *
+from dataformatter import DataFormatter
+import tempfile
+
 
 
 def main(argv):
@@ -489,9 +493,35 @@ def main(argv):
     print "Settings  -> %s" %settings
 
     engine = dmonadpengine.AdpEngine(settings, dataDir=dataDir, modelsDir=modelsDir)
+    #engine.printTest()
     engine.initConnector()
+    #
+    #
     engine.run(engine)
-    # # systemReturn, yarnReturn, reducemetrics, mapmetrics, sparkReturn, stormReturn = engine.getData()
+    # systemReturn, yarnReturn, reducemetrics, mapmetrics, sparkReturn, stormReturn = engine.getData()
+    # dformat = DataFormatter(dataDir)
+    # test = dweka(dataDir, modelsDir)
+    # options = ["-N", "10", "-S", "10"]
+    #
+    # # dataf = dformat.savetomemory(yarnReturn)
+    # # dataf = dformat.df2cStringIO(yarnReturn)
+    # dataf = tempfile.NamedTemporaryFile(suffix='.csv')
+    # print dataf.name
+    # # print dataf.file
+    # # print dataf.star
+    #
+    # dformat.df2csv(yarnReturn, dataf.name)
+    # test.simpleKMeansTrain(dataf.name, options)
+    # anomalies = test.runclustermodel("skm", dataf.name)
+    # for e in anomalies:
+    #     # print ut2hum(e)
+    #     print e / 1000
+    # dataf.close()
+
+
+    # print type(dataf.getvalue())
+    # dataf = "cTest.csv"
+
     #
     # filtered_df = engine.filterData(yarnReturn)
     # filtered_df.to_csv(os.path.join(dataDir, 'ctest2.csv'), index=False)

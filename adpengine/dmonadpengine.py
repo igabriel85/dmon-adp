@@ -1,11 +1,12 @@
 import os
 from dmonconnector import *
 from dmonpoint import *
-from util import queryParser, nodesParse, str2Bool, cfilterparse, rfilterparse, pointThraesholds, parseDelay
+from util import queryParser, nodesParse, str2Bool, cfilterparse, rfilterparse, pointThraesholds, parseDelay, parseMethodSettings, ut2hum
 import pandas as pd
 from threadRun import AdpDetectThread, AdpPointThread, AdpTrainThread
 from dmonweka import dweka
 from time import sleep
+import tempfile
 
 class AdpEngine:
     def __init__(self, settingsDict, dataDir, modelsDir):
@@ -104,7 +105,13 @@ class AdpEngine:
                 sys.exit(1)
         return desNodes
 
-    def getData(self):
+    def getData(self, detect=False):
+        if detect:
+            tfrom = "now-%s" %self.interval
+            to = "now"
+        else:
+            tfrom = self.tfrom
+            to = self.to
         queryd = queryParser(self.query)
         logger.info('[%s] : [INFO] Checking node list',
                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
@@ -126,10 +133,10 @@ class AdpEngine:
                     packet, packet_file = self.qConstructor.packetString(node)
 
                     # Queries
-                    qload = self.qConstructor.systemLoadQuery(load, self.tfrom, self.to, self.qsize, self.qinterval)
-                    qmemory = self.qConstructor.systemMemoryQuery(memory, self.tfrom, self.to, self.qsize, self.qinterval)
-                    qinterface = self.qConstructor.systemInterfaceQuery(interface, self.tfrom, self.to, self.qsize, self.qinterval)
-                    qpacket = self.qConstructor.systemInterfaceQuery(packet, self.tfrom, self.to, self.qsize, self.qinterval)
+                    qload = self.qConstructor.systemLoadQuery(load, tfrom, to, self.qsize, self.qinterval)
+                    qmemory = self.qConstructor.systemMemoryQuery(memory, tfrom, to, self.qsize, self.qinterval)
+                    qinterface = self.qConstructor.systemInterfaceQuery(interface, tfrom, to, self.qsize, self.qinterval)
+                    qpacket = self.qConstructor.systemInterfaceQuery(packet, tfrom, to, self.qsize, self.qinterval)
 
                     # Execute query and convert response to csv
                     qloadResponse = self.dmonConnector.aggQuery(qload)
@@ -186,12 +193,12 @@ class AdpEngine:
                     reduce = self.qConstructor.jvmRedProcessString(node)
                     map = self.qConstructor.jvmMapProcessingString(node)
 
-                    qnodeManager = self.qConstructor.yarnNodeManager(nodeManager, self.tfrom, self.to, self.qsize, self.qinterval)
-                    qjvmNodeManager = self.qConstructor.jvmNNquery(jvmNodeManager, self.tfrom, self.to, self.qsize, self.qinterval)
-                    qdatanode = self.qConstructor.datanodeMetricsQuery(datanode, self.tfrom, self.to, self.qsize, self.qinterval)
-                    qshuffle = self.qConstructor.shuffleQuery(shuffle, self.tfrom, self.to, self.qsize, self.qinterval)
-                    qreduce = self.qConstructor.queryByProcess(reduce, self.tfrom, self.to, 500, self.qinterval)
-                    qmap = self.qConstructor.queryByProcess(map, self.tfrom, self.to, 500, self.qinterval)
+                    qnodeManager = self.qConstructor.yarnNodeManager(nodeManager, tfrom, to, self.qsize, self.qinterval)
+                    qjvmNodeManager = self.qConstructor.jvmNNquery(jvmNodeManager, tfrom, to, self.qsize, self.qinterval)
+                    qdatanode = self.qConstructor.datanodeMetricsQuery(datanode, tfrom, to, self.qsize, self.qinterval)
+                    qshuffle = self.qConstructor.shuffleQuery(shuffle, tfrom, to, self.qsize, self.qinterval)
+                    qreduce = self.qConstructor.queryByProcess(reduce, tfrom, to, 500, self.qinterval)
+                    qmap = self.qConstructor.queryByProcess(map, tfrom, to, 500, self.qinterval)
 
                     gnodeManagerResponse = self.dmonConnector.aggQuery(qnodeManager)
                     gjvmNodeManagerResponse = self.dmonConnector.aggQuery(qjvmNodeManager)
@@ -255,7 +262,7 @@ class AdpEngine:
                                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), process,
                                             host)
                             hreduce, hreduce_file = self.qConstructor.jvmRedProcessbyNameString(host, process)
-                            qhreduce = self.qConstructor.jvmNNquery(hreduce, self.tfrom, self.to, self.qsize, self.qinterval)
+                            qhreduce = self.qConstructor.jvmNNquery(hreduce, tfrom, to, self.qsize, self.qinterval)
                             ghreduce = self.dmonConnector.aggQuery(qhreduce)
                             if not checkpoint:
                                 self.dformat.dict2csv(ghreduce, qhreduce, hreduce_file)
@@ -274,7 +281,7 @@ class AdpEngine:
                                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), process,
                                             host)
                             hmap, hmap_file = self.qConstructor.jvmMapProcessbyNameString(host, process)
-                            qhmap = self.qConstructor.jvmNNquery(hmap, self.tfrom, self.to, self.qsize, self.qinterval)
+                            qhmap = self.qConstructor.jvmNNquery(hmap, tfrom, to, self.qsize, self.qinterval)
                             ghmap = self.dmonConnector.aggQuery(qhmap)
                             if not checkpoint:
                                 self.dformat.dict2csv(ghmap, qhmap, hmap_file)
@@ -298,14 +305,14 @@ class AdpEngine:
                 fsop, fsop_file = self.qConstructor.fsopDurationsString()
 
                 # Queries
-                qdfs = self.qConstructor.dfsQuery(dfs, self.tfrom, self.to, self.qsize, self.qinterval)
-                qdfsFs = self.qConstructor.dfsFSQuery(dfsFs, self.tfrom, self.to, self.qsize, self.qinterval)
-                qjvmNameNode = self.qConstructor.jvmNNquery(jvmNameNodeString, self.tfrom, self.to, self.qsize, self.qinterval)
-                qqueue = self.qConstructor.resourceQueueQuery(queue, self.tfrom, self.to, self.qsize, self.qinterval)
-                qcluster = self.qConstructor.clusterMetricsQuery(cluster, self.tfrom, self.to, self.qsize, self.qinterval)
-                qjvmResMng = self.qConstructor.jvmNNquery(jvmResMng, self.tfrom, self.to, self.qsize, self.qinterval)
-                qjvmMrapp = self.qConstructor.jvmNNquery(jvmMrapp, self.tfrom, self.to, self.qsize, self.qinterval)
-                qfsop = self.qConstructor.fsopDurationsQuery(fsop, self.tfrom, self.to, self.qsize, self.qinterval)
+                qdfs = self.qConstructor.dfsQuery(dfs, tfrom, to, self.qsize, self.qinterval)
+                qdfsFs = self.qConstructor.dfsFSQuery(dfsFs, tfrom, to, self.qsize, self.qinterval)
+                qjvmNameNode = self.qConstructor.jvmNNquery(jvmNameNodeString, tfrom, to, self.qsize, self.qinterval)
+                qqueue = self.qConstructor.resourceQueueQuery(queue, tfrom, to, self.qsize, self.qinterval)
+                qcluster = self.qConstructor.clusterMetricsQuery(cluster, tfrom, to, self.qsize, self.qinterval)
+                qjvmResMng = self.qConstructor.jvmNNquery(jvmResMng, tfrom, to, self.qsize, self.qinterval)
+                qjvmMrapp = self.qConstructor.jvmNNquery(jvmMrapp, tfrom, to, self.qsize, self.qinterval)
+                qfsop = self.qConstructor.fsopDurationsQuery(fsop, tfrom, to, self.qsize, self.qinterval)
 
 
                 # Responses
@@ -380,17 +387,17 @@ class AdpEngine:
                 mCluster = mNameNode = mNodeManager = mNodeManagerJVM = mShuffle = mDFS = mDataNode = mMap = mReduce = 0
                 for el in queryd['yarn']:
                     if el == 'cluster':
-                        mCluster = self.getCluster()
+                        mCluster = self.getCluster(detect=detect)
                     if el == 'nn':
-                        mNameNode = self.getNameNode()
+                        mNameNode = self.getNameNode(detect=detect)
                     if el == 'nm':
-                        mNodeManager, mNodeManagerJVM, mShuffle = self.getNodeManager(desNodes)
+                        mNodeManager, mNodeManagerJVM, mShuffle = self.getNodeManager(desNodes, detect=detect)
                     if el == 'dfs':
-                        mDFS = self.getDFS()
+                        mDFS = self.getDFS(detect=detect)
                     if el == 'dn':
-                        mDataNode = self.getDataNode(desNodes)
+                        mDataNode = self.getDataNode(desNodes, detect=detect)
                     if el == 'mr':
-                       mMap, mReduce = self.getMapnReduce(desNodes)
+                       mMap, mReduce = self.getMapnReduce(desNodes, detect=detect)
                     if el not in ['cluster', 'nn', 'nm', 'dfs', 'dn', 'mr']:
                         logger.error('[%s] : [ERROR] Unknown metrics context %s',
                                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), el)
@@ -475,21 +482,59 @@ class AdpEngine:
         if str2Bool(self.train):
             print "Getting data ..."
             systemReturn, yarnReturn, reducemetrics, mapmetrics, sparkReturn, stormReturn = self.getData()
+            #yarnReturn = self.filterData(yarnReturn) #todo
             if self.type == 'clustering':
                 if self.method in self.allowedMethodsClustering:
                     print "Training with selected method %s of type %s" % (self.method, self.type)
                     if self.method == 'skm':
                         print "Method %s settings detected -> %s" % (self.method, str(self.methodSettings))
+                        opt = parseMethodSettings(self.methodSettings)
+                        if not opt:
+                            opt = ['-S', '10', '-N', '10']
+                        dataf = tempfile.NamedTemporaryFile(suffix='.csv')
+                        self.dformat.df2csv(yarnReturn, dataf.name)
+                        try:
+                            self.dweka.simpleKMeansTrain(dataf=dataf.name, options=opt, mname=self.export)
+                        except Exception as inst:
+                            print "Unable to run training for method %s exited with %s and %s" % (self.method, type(inst), inst.args)
+                            logger.error('[%s] : [ERROR] Unable to run training for method %s exited with %s and %s',
+                                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.method, type(inst), inst.args)
+                            sys.exit(1)
                         print "Saving model with name %s" % self.modelName(self.method, self.export)
                     elif self.method == 'em':
                         print "Method %s settings detected -> %s" % (self.method, str(self.methodSettings))
+                        opt = parseMethodSettings(self.methodSettings)
+                        if not opt:
+                            opt = ["-I", "1000", "-N", "6",  "-M", "1.0E-6", "-num-slots", "1", "-S", "100"]
+                        dataf = tempfile.NamedTemporaryFile(suffix='.csv')
+                        self.dformat.df2csv(yarnReturn, dataf.name)
+                        try:
+                            self.dweka.emTrain(dataf=dataf.name, options=opt, mname=self.export)
+                        except Exception as inst:
+                            print "Unable to run training for method %s exited with %s and %s" % (
+                            self.method, type(inst), inst.args)
+                            logger.error('[%s] : [ERROR] Unable to run training for method %s exited with %s and %s',
+                                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.method,
+                                         type(inst), inst.args)
+                            sys.exit(1)
                         print "Saving model with name %s" % self.modelName(self.method, self.export)
                     elif self.method == 'dbscan':
                         print "Method %s settings detected -> %s" % (self.method, str(self.methodSettings))
+                        opt = parseMethodSettings(self.methodSettings)
+                        if not opt:
+                            opt = ["-E",  "0.9",  "-M", "6",  "-D", "weka.clusterers.forOPTICSAndDBScan.DataObjects.EuclideanDataObject"]
+                        dataf = tempfile.NamedTemporaryFile(suffix='.csv')
+                        self.dformat.df2csv(yarnReturn, dataf.name)
+                        try:
+                            self.dweka.dbscanTrain(dataf=dataf.name, options=opt, mname=self.export)
+                        except Exception as inst:
+                            print "Unable to run training for method %s exited with %s and %s" % (
+                                self.method, type(inst), inst.args)
+                            logger.error('[%s] : [ERROR] Unable to run training for method %s exited with %s and %s',
+                                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.method,
+                                         type(inst), inst.args)
+                            sys.exit(1)
                         print "Saving model with name %s" % self.modelName(self.method, self.export)
-
-
-                    # TODO: dweka instance for training selected method with parameters
 
                     # Once training finished set training to false
                     self.train = False
@@ -539,7 +584,7 @@ class AdpEngine:
             lmemory = []
             linterface = []
             lpack = []
-            tfrom = "now-30s"
+            tfrom = "now-30s" # todo compute based on delay
             to = "now"
             for node in self.desiredNodesList:
                 load, load_file = self.qConstructor.loadString(node)
@@ -588,11 +633,21 @@ class AdpEngine:
     def detectAnomalies(self):
         if str2Bool(self.detect):
             if self.type == 'clustering':
+                print "Collect data ..."
+                systemReturn, yarnReturn, reducemetrics, mapmetrics, sparkReturn, stormReturn = self.getData(detect=True)
+                # yarnReturn = self.filterData(yarnReturn) #todo
                 if self.method in self.allowedMethodsClustering:
                     print "Detecting with selected method %s of type %s" % (self.method, self.type)
                     if os.path.isfile(os.path.join(self.modelsDir, self.modelName(self.method, self.load))):
-                        print "Model found at %s" %str(os.path.join(self.modelsDir, self.modelName(self.method, self.load)))
-                        # TODO load trained model and start detection using dweka selected method and qinterval
+                        print "Model found at %s" % str(
+                            os.path.join(self.modelsDir, self.modelName(self.method, self.load)))
+                        dataf = tempfile.NamedTemporaryFile(suffix='.csv')
+                        self.dformat.df2csv(yarnReturn, dataf.name)
+                        anomalies = self.dweka.runclustermodel(self.method, self.load)
+                        for e in anomalies:
+                            print ut2hum(e)
+                            a = {"type": self.method, "time": ut2hum(e)}
+                            self.reportAnomaly(a)
                     else:
                         logger.error('[%s] : [ERROR] Model %s not found at %s ',
                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.load,
@@ -616,7 +671,6 @@ class AdpEngine:
             logger.warning('[%s] : [WARN] Detect is set to false, skipping...',
                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(self.detect))
         sleep(parseDelay(self.interval))
-        print parseDelay(self.interval)
 
     def run(self, engine):
         try:
@@ -626,16 +680,13 @@ class AdpEngine:
 
             threadPoint.start()
             threadTrain.start()
-            threadDetect.start()
+            # threadDetect.start()
         except Exception as inst:
             logger.error('[%s] : [ERROR] Exception %s with %s during point thread execution, halting',
                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
             sys.exit(1)
 
-
-
-        # todo use threads
-        return "run"
+        return 0
 
     def modelName(self, methodname, modelName):
         '''
@@ -655,8 +706,14 @@ class AdpEngine:
     def reportAnomaly(self, body):
         self.dmonConnector.pushAnomaly(anomalyIndex=self.anomalyIndex, doc_type='anomaly', body=body)
 
-    def getDFS(self):
+    def getDFS(self, detect=False):
         # Query Strings
+        if detect:
+            tfrom = "now-%s" % self.interval
+            to = "now"
+        else:
+            tfrom = self.tfrom
+            to = self.to
         print "Querying DFS metrics"
         logger.info('[%s] : [INFO] Querying DFS metrics...',
                                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
@@ -666,9 +723,9 @@ class AdpEngine:
         fsop, fsop_file = self.qConstructor.fsopDurationsString()
 
         # Query constructor
-        qdfs = self.qConstructor.dfsQuery(dfs, self.tfrom, self.to, self.qsize, self.qinterval)
-        qdfsFs = self.qConstructor.dfsFSQuery(dfsFs, self.tfrom, self.to, self.qsize, self.qinterval)
-        qfsop = self.qConstructor.fsopDurationsQuery(fsop, self.tfrom, self.to, self.qsize, self.qinterval)
+        qdfs = self.qConstructor.dfsQuery(dfs, tfrom, to, self.qsize, self.qinterval)
+        qdfsFs = self.qConstructor.dfsFSQuery(dfsFs, tfrom, to, self.qsize, self.qinterval)
+        qfsop = self.qConstructor.fsopDurationsQuery(fsop, tfrom, to, self.qsize, self.qinterval)
 
         # Execute query
         gdfs = self.dmonConnector.aggQuery(qdfs)
@@ -703,7 +760,13 @@ class AdpEngine:
             print "DFS merge complete."
             return merged_DFS
 
-    def getNodeManager(self, nodes):
+    def getNodeManager(self, nodes, detect=False):
+        if detect:
+            tfrom = "now-%s" % self.interval
+            to = "now"
+        else:
+            tfrom = self.tfrom
+            to = self.to
         print "Querying  Node Manager and Shuffle metrics ..."
         logger.info('[%s] : [INFO] Querying  Node Manager and Shuffle metrics...',
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
@@ -716,11 +779,11 @@ class AdpEngine:
             jvmNodeManager, jvmNodeManager_file = self.qConstructor.jvmnodeManagerString(node)
             shuffle, shuffle_file = self.qConstructor.shuffleString(node)
 
-            qnodeManager = self.qConstructor.yarnNodeManager(nodeManager, self.tfrom, self.to, self.qsize,
+            qnodeManager = self.qConstructor.yarnNodeManager(nodeManager, tfrom, to, self.qsize,
                                                              self.qinterval)
-            qjvmNodeManager = self.qConstructor.jvmNNquery(jvmNodeManager, self.tfrom, self.to, self.qsize,
+            qjvmNodeManager = self.qConstructor.jvmNNquery(jvmNodeManager, tfrom, to, self.qsize,
                                                            self.qinterval)
-            qshuffle = self.qConstructor.shuffleQuery(shuffle, self.tfrom, self.to, self.qsize, self.qinterval)
+            qshuffle = self.qConstructor.shuffleQuery(shuffle, tfrom, to, self.qsize, self.qinterval)
 
             gnodeManagerResponse = self.dmonConnector.aggQuery(qnodeManager)
             if gnodeManagerResponse['aggregations'].values()[0].values()[0]:
@@ -774,13 +837,19 @@ class AdpEngine:
             print "Node Manager Merge Complete"
         return nm_merged, jvmnn_merged, shuffle_merged
 
-    def getNameNode(self):
+    def getNameNode(self, detect=False):
+        if detect:
+            tfrom = "now-%s" % self.interval
+            to = "now"
+        else:
+            tfrom = self.tfrom
+            to = self.to
         print "Querying  Name Node metrics ..."
         logger.info('[%s] : [INFO] Querying  Name Node metrics ...',
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
         checkpoint = str2Bool(self.checkpoint)
         jvmNameNodeString, jvmNameNode_file = self.qConstructor.jvmNameNodeString()
-        qjvmNameNode = self.qConstructor.jvmNNquery(jvmNameNodeString, self.tfrom, self.to, self.qsize, self.qinterval)
+        qjvmNameNode = self.qConstructor.jvmNNquery(jvmNameNodeString, tfrom, to, self.qsize, self.qinterval)
         gjvmNameNode = self.dmonConnector.aggQuery(qjvmNameNode)
         if not checkpoint:
             self.dformat.dict2csv(gjvmNameNode, qjvmNameNode, jvmNameNode_file)
@@ -794,7 +863,13 @@ class AdpEngine:
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
         return returnNN
 
-    def getCluster(self):
+    def getCluster(self, detect=False):
+        if detect:
+            tfrom = "now-%s" % self.interval
+            to = "now"
+        else:
+            tfrom = self.tfrom
+            to = self.to
         print "Querying  Cluster metrics ..."
         logger.info('[%s] : [INFO] Querying  Name Node metrics ...',
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
@@ -804,12 +879,10 @@ class AdpEngine:
         jvmMrapp, jvmMrapp_file = self.qConstructor.jvmMrappmasterString()
         jvmResMng, jvmResMng_file = self.qConstructor.jvmResourceManagerString()
 
-
-        qjvmMrapp = self.qConstructor.jvmNNquery(jvmMrapp, self.tfrom, self.to, self.qsize, self.qinterval)
-        qqueue = self.qConstructor.resourceQueueQuery(queue, self.tfrom, self.to, self.qsize, self.qinterval)
-        qcluster = self.qConstructor.clusterMetricsQuery(cluster, self.tfrom, self.to, self.qsize, self.qinterval)
-        qjvmResMng = self.qConstructor.jvmNNquery(jvmResMng, self.tfrom, self.to, self.qsize, self.qinterval)
-
+        qjvmMrapp = self.qConstructor.jvmNNquery(jvmMrapp, tfrom, to, self.qsize, self.qinterval)
+        qqueue = self.qConstructor.resourceQueueQuery(queue, tfrom, to, self.qsize, self.qinterval)
+        qcluster = self.qConstructor.clusterMetricsQuery(cluster, tfrom, to, self.qsize, self.qinterval)
+        qjvmResMng = self.qConstructor.jvmNNquery(jvmResMng, tfrom, to, self.qsize, self.qinterval)
 
         gqueue = self.dmonConnector.aggQuery(qqueue)
         gcluster = self.dmonConnector.aggQuery(qcluster)
@@ -839,13 +912,18 @@ class AdpEngine:
         logger.info('[%s] : [INFO] Querying  Name Node metrics complete',
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
 
-
         logger.info('[%s] : [INFO] Cluster Merge complete',
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
         print "Cluster merge complete"
         return clusterReturn
 
-    def getMapnReduce(self, nodes):
+    def getMapnReduce(self, nodes, detect=False):
+        if detect:
+            tfrom = "now-%s" % self.interval
+            to = "now"
+        else:
+            tfrom = self.tfrom
+            to = self.to
         # per slave unique process name list
         nodeProcessReduce = {}
         nodeProcessMap = {}
@@ -859,8 +937,8 @@ class AdpEngine:
             reduce = self.qConstructor.jvmRedProcessString(node)
             map = self.qConstructor.jvmMapProcessingString(node)
 
-            qreduce = self.qConstructor.queryByProcess(reduce, self.tfrom, self.to, 500, self.qinterval)
-            qmap = self.qConstructor.queryByProcess(map, self.tfrom, self.to, 500, self.qinterval)
+            qreduce = self.qConstructor.queryByProcess(reduce, tfrom, to, 500, self.qinterval)
+            qmap = self.qConstructor.queryByProcess(map, tfrom, to, 500, self.qinterval)
 
             greduce = self.dmonConnector.aggQuery(qreduce)
             gmap = self.dmonConnector.aggQuery(qmap)
@@ -887,7 +965,7 @@ class AdpEngine:
                                 datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), process,
                                 host)
                     hreduce, hreduce_file = self.qConstructor.jvmRedProcessbyNameString(host, process)
-                    qhreduce = self.qConstructor.jvmNNquery(hreduce, self.tfrom, self.to, self.qsize, self.qinterval)
+                    qhreduce = self.qConstructor.jvmNNquery(hreduce, tfrom, to, self.qsize, self.qinterval)
                     ghreduce = self.dmonConnector.aggQuery(qhreduce)
                     if not checkpoint:
                         self.dformat.dict2csv(ghreduce, qhreduce, hreduce_file)
@@ -912,7 +990,7 @@ class AdpEngine:
                                 datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), process,
                                 host)
                     hmap, hmap_file = self.qConstructor.jvmMapProcessbyNameString(host, process)
-                    qhmap = self.qConstructor.jvmNNquery(hmap, self.tfrom, self.to, self.qsize, self.qinterval)
+                    qhmap = self.qConstructor.jvmNNquery(hmap, tfrom, to, self.qsize, self.qinterval)
                     ghmap = self.dmonConnector.aggQuery(qhmap)
                     if not checkpoint:
                         self.dformat.dict2csv(ghmap, qhmap, hmap_file)
@@ -928,7 +1006,13 @@ class AdpEngine:
                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
         return lMP, lRD
 
-    def getDataNode(self, nodes):
+    def getDataNode(self, nodes, detect=False):
+        if detect:
+            tfrom = "now-%s" % self.interval
+            to = "now"
+        else:
+            tfrom = self.tfrom
+            to = self.to
         print "Querying  Data Node metrics ..."
         logger.info('[%s] : [INFO] Querying  Data Node metrics ...',
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
@@ -936,7 +1020,7 @@ class AdpEngine:
         lDN = []
         for node in nodes:
             datanode, datanode_file = self.qConstructor.datanodeString(node)
-            qdatanode = self.qConstructor.datanodeMetricsQuery(datanode, self.tfrom, self.to, self.qsize,
+            qdatanode = self.qConstructor.datanodeMetricsQuery(datanode, tfrom, to, self.qsize,
                                                                self.qinterval)
             gdatanode = self.dmonConnector.aggQuery(qdatanode)
             if gdatanode['aggregations'].values()[0].values()[0]:
