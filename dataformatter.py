@@ -284,8 +284,21 @@ class DataFormatter:
         else:
             logger.error('[%s] : [INFO] Cannot merge type %s',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(type(dfList[0])))
+        # for d in dfList:
+        #     if d.empty:
+        #         logger.warning('[%s] : [INFO] Detected empty dataframe in final merge, removing ...',
+        #                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        #
+        #         dfList.pop(dfList.index(d))
+        try:
+            current = reduce(lambda x, y: pd.merge(x, y, on='key'), dfList)
+        except Exception as inst:
+            logger.error('[%s] : [ERROR] Merge dataframes exception %s with args %s',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+            logger.error('[%s] : [ERROR] Merge dataframes exception df list %s',
+                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), dfList)
+            sys.exit(1)
 
-        current = reduce(lambda x, y: pd.merge(x, y, on='key'), dfList)
         # current.set_index('key', inplace=True)
         return current
 
@@ -297,7 +310,14 @@ class DataFormatter:
         '''
         # dataFrame.set_index('key', inplace=True) -> if inplace it modifies all copies of df including
         # in memory resident ones
-        kDF = dataFrame.set_index('key')
+        try:
+            kDF = dataFrame.set_index('key')
+        except Exception as inst:
+            logger.error('[%s] : [ERROR] Cannot write dataframe exception %s with arguments %s',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+            print "Cannot write dataframe exception %s with %s'" % (type(inst), inst.args)
+            sys.exit(1)
+
         kDF.to_csv(mergedFile)
 
     def chainMergeSystem(self, linterface=None, lload=None, lmemory=None, lpack=None):
