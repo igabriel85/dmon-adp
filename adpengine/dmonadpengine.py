@@ -4,6 +4,7 @@ from dmonpoint import *
 from util import queryParser, nodesParse, str2Bool, cfilterparse, rfilterparse, pointThraesholds, parseDelay
 import pandas as pd
 from threadRun import AdpDetectThread, AdpPointThread, AdpTrainThread
+from dmonweka import dweka
 from time import sleep
 
 class AdpEngine:
@@ -36,6 +37,7 @@ class AdpEngine:
         self.dmonConnector = Connector(self.esendpoint)
         self.qConstructor = QueryConstructor()
         self.dformat = DataFormatter(self.dataDir)
+        self.dweka = dweka(self.dataDir, self.modelsDir)
         self.regnodeList = []
         self.allowedMethodsClustering = ['skm', 'em', 'dbscan']
         self.allowefMethodsClassification = []  # TODO
@@ -470,15 +472,23 @@ class AdpEngine:
         return df
 
     def trainMethod(self):
-        # use threads
         if str2Bool(self.train):
+            print "Getting data ..."
+            systemReturn, yarnReturn, reducemetrics, mapmetrics, sparkReturn, stormReturn = self.getData()
             if self.type == 'clustering':
                 if self.method in self.allowedMethodsClustering:
                     print "Training with selected method %s of type %s" % (self.method, self.type)
-                    print "Getting data ..."
-                    systemReturn, yarnReturn, reducemetrics, mapmetrics, sparkReturn, stormReturn = self.getData()
-                    print "Method %s settings detected -> %s" % (self.method, str(self.methodSettings))
-                    print "Saving model with name %s" % self.modelName(self.method, self.export)
+                    if self.method == 'skm':
+                        print "Method %s settings detected -> %s" % (self.method, str(self.methodSettings))
+                        print "Saving model with name %s" % self.modelName(self.method, self.export)
+                    elif self.method == 'em':
+                        print "Method %s settings detected -> %s" % (self.method, str(self.methodSettings))
+                        print "Saving model with name %s" % self.modelName(self.method, self.export)
+                    elif self.method == 'dbscan':
+                        print "Method %s settings detected -> %s" % (self.method, str(self.methodSettings))
+                        print "Saving model with name %s" % self.modelName(self.method, self.export)
+
+
                     # TODO: dweka instance for training selected method with parameters
 
                     # Once training finished set training to false
@@ -611,37 +621,18 @@ class AdpEngine:
     def run(self, engine):
         try:
             threadPoint = AdpPointThread(engine, 'Thread Point')
-            # threadTrain = AdpTrainThread(engine, 'Thread Train')
-            # threadDetect = AdpDetectThread(engine, 'Thread Detect')
+            threadTrain = AdpTrainThread(engine, 'Thread Train')
+            threadDetect = AdpDetectThread(engine, 'Thread Detect')
 
             threadPoint.start()
-            # threadTrain.start()
-            # threadDetect.start()
+            threadTrain.start()
+            threadDetect.start()
         except Exception as inst:
             logger.error('[%s] : [ERROR] Exception %s with %s during point thread execution, halting',
                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
             sys.exit(1)
 
-        # try:
-        #     # thread.start_new_thread(self.detectPointAnomalies(delayPoint))
-        #     thread.start_new_thread(self.trainMethod())
-        #     sys.exit()
-        #     # thread.start_new_thread(self.detectAnomalies(delapyComplex))
-        # except Exception as inst:
-        #     logger.error('[%s] : [ERROR] Exception %s with %s during train thread execution, halting',
-        #                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst),
-        #                          inst.args)
-        #     sys.exit(1)
-        #
-        # try:
-        #     # thread.start_new_thread(self.detectPointAnomalies(delayPoint))
-        #     # thread.start_new_thread(self.trainMethod())
-        #     thread.start_new_thread(self.detectAnomalies(delapyComplex))
-        # except Exception as inst:
-        #     logger.error('[%s] : [ERROR] Exception %s with %s during detect thread execution, halting',
-        #                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst),
-        #                          inst.args)
-        #     sys.exit(1)
+
 
         # todo use threads
         return "run"
