@@ -18,6 +18,8 @@ limitations under the License.
 from adplogger import logger
 import csv
 import os
+import io
+import cStringIO
 from datetime import datetime
 import time
 import sys
@@ -508,3 +510,15 @@ class DataFormatter:
             df = pd.read_csv(f)
             dfList.append(df)
         return dfList
+
+    def df2BytesIO(self, df):
+        out = io.BytesIO()
+        self.df2csv(df, out)
+        return out
+
+    def df2cStringIO(self, df):
+        out = cStringIO.StringIO()
+        self.df2csv(df, out)
+        return out
+
+
