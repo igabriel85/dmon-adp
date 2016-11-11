@@ -22,6 +22,7 @@ from os.path import isfile, join
 import os
 import csv
 import pandas as pd
+from datetime import datetime
 
 
 modelDir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
@@ -206,7 +207,8 @@ def parseDelay(st):
     else:
         return 0
 
-
+def ut2hum(ut):
+    return datetime.fromtimestamp(ut / 1000).strftime('%Y-%m-%d %H:%M:%S')
 # test = '1m'
 # test2 = '1s'
 # test3 = '1h'

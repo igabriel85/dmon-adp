@@ -99,19 +99,34 @@ class Connector:
         return rData
 
     def createIndex(self, indexName):
-        self.esInstance.create(index=indexName, ignore=400)
-        logger.info('[%s] : [INFO] Created index %s',
+        try:
+            self.esInstance.create(index=indexName, ignore=400)
+            logger.info('[%s] : [INFO] Created index %s',
                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), indexName)
+        except Exception as inst:
+            logger.error('[%s] : [ERROR] Failed to created index %s with %s and %s',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), indexName, type(inst), inst.args)
 
     def closeIndex(self, indexName):
-        self.esInstance.close(index=indexName)
-        logger.info('[%s] : [INFO] Closed index %s',
+        try:
+            self.esInstance.close(index=indexName)
+            logger.info('[%s] : [INFO] Closed index %s',
                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), indexName)
+        except Exception as inst:
+            logger.error('[%s] : [ERROR] Failed to close index %s with %s and %s',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), indexName, type(inst),
+                         inst.args)
 
     def deleteIndex(self, indexName):
-        res = self.esInstance.delete(index=indexName, ignore=[400, 404])
-        logger.info('[%s] : [INFO] Deleted index %s',
+        try:
+            res = self.esInstance.delete(index=indexName, ignore=[400, 404])
+            logger.info('[%s] : [INFO] Deleted index %s',
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), indexName)
+        except Exception as inst:
+            logger.error('[%s] : [ERROR] Failed to delete index %s with %s and %s',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), indexName, type(inst),
+                         inst.args)
+            return 0
         return res
 
     def openIndex(self, indexName):
