@@ -100,7 +100,7 @@ class DataFormatter:
             return 0
 
     def fillMissing(self, df):
-        df.fillna(0)
+        df.fillna(0, inplace=True)
 
     def dropMissing(self, df):
         df.dropna(axis=1, how='all', inplace=True)
@@ -204,17 +204,17 @@ class DataFormatter:
         lFiles = [dfs, dfsfs, fsop]
         return self.listMerge(lFiles)
 
-    def chainMergeCluster(self, clusterMetrics=None, queue=None, jvmRM=None, jvmmrapp=None):
+    def chainMergeCluster(self, clusterMetrics=None, queue=None, jvmRM=None):
         '''
         :return: -> merged cluster metrics
         '''
-        if clusterMetrics is None and queue is None and jvmRM is None and jvmmrapp is None:
+        if clusterMetrics is None and queue is None and jvmRM is None:
             clusterMetrics = os.path.join(self.dataDir, "ClusterMetrics.csv")
             queue = os.path.join(self.dataDir, "ResourceManagerQueue.csv")
             jvmRM = os.path.join(self.dataDir, "JVM_RM.csv")
-            jvmmrapp = os.path.join(self.dataDir, "JVM_MRAPP.csv")
+            # jvmmrapp = os.path.join(self.dataDir, "JVM_MRAPP.csv")
 
-        lFiles = [clusterMetrics, queue, jvmRM, jvmmrapp]
+        lFiles = [clusterMetrics, queue, jvmRM]
 
         return self.listMerge(lFiles)
 
@@ -395,7 +395,8 @@ class DataFormatter:
         merged_df = self.listMerge(lFile)
         merged_df.sort_index(axis=1, inplace=True)
         # merged_df.set_index('key', inplace=True)
-        self.dropMissing(merged_df)
+        #self.dropMissing(merged_df)
+        self.fillMissing(merged_df)
         return merged_df
 
     def dict2csv(self, response, query, filename, df=False):

@@ -228,15 +228,15 @@ def parseMethodSettings(st):
     return mSettings
 
 
-def wait4Model(count):
-    if count < 10:
+def wait4Model(count=0):
+    test = False
+    if test or count < 10:
         time.sleep(1)
         count += 1
-        print count
         return wait4Model(count)
-    print "Done"
+    return 1
 
-# wait4Model(0)
+# wait4Model()
 
 # test = {'s': '10', 'n': '10'}
 # print parseMethodSettings(test)

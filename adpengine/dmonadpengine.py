@@ -56,6 +56,7 @@ class AdpEngine:
         self.systemReturn = 0
         self.mapmetrics = 0
         self.reducemetrics = 0
+        self.mrapp = 0
 
     def initConnector(self):
         print "Establishing connection with dmon ....."
@@ -366,7 +367,7 @@ class AdpEngine:
 
                    merged_DFS = self.dformat.chainMergeDFS(dfs=df_dfs, dfsfs=df_dfsFs, fsop=df_fsop)
                    merged_cluster = self.dformat.chainMergeCluster(clusterMetrics=df_cluster, queue=df_queue,
-                                                                   jvmRM=df_jvmResourceManager, jvmmrapp=df_jvmMrapp)
+                                                                   jvmRM=df_jvmResourceManager)
                    merge_nodemanager, jvmNode_manager, mShuffle= self.dformat.chainMergeNM(lNM=lNM, lNMJvm=lNMJvm, lShuffle=lShuffle)
                    datanode_merge = self.dformat.chainMergeDN(lDN=lDataNode)
                    df_jvmNameNode = self.dformat.dict2csv(gjvmNameNode, qjvmNameNode, jvmNameNode_file, df=checkpoint)
@@ -382,6 +383,7 @@ class AdpEngine:
                 self.yarnReturn = final_merge
                 self.mapmetrics = lmap
                 self.reducemetrics = lreduce
+                self.mrapp = df_jvmMrapp
             else:
                 # cluster, nn, nm, dfs, dn, mr
                 mCluster = mNameNode = mNodeManager = mNodeManagerJVM = mShuffle = mDFS = mDataNode = mMap = mReduce = 0
@@ -397,7 +399,7 @@ class AdpEngine:
                     if el == 'dn':
                         mDataNode = self.getDataNode(desNodes, detect=detect)
                     if el == 'mr':
-                       mMap, mReduce = self.getMapnReduce(desNodes, detect=detect)
+                       mMap, mReduce, mMRApp = self.getMapnReduce(desNodes, detect=detect)
                     if el not in ['cluster', 'nn', 'nm', 'dfs', 'dn', 'mr']:
                         logger.error('[%s] : [ERROR] Unknown metrics context %s',
                                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), el)
@@ -413,6 +415,7 @@ class AdpEngine:
                 self.yarnReturn = final_merge
                 self.reducemetrics = mReduce
                 self.mapmetrics = mMap
+                self.mrapp = mMRApp
                 self.dformat.df2csv(final_merge, os.path.join(self.dataDir, 'cTest.csv'))
             print "Finished query and merge for yarn metrics"
 
@@ -423,7 +426,7 @@ class AdpEngine:
             print "Storm metrics" #todo
             self.stormReturn = 0
 
-        return self.systemReturn, self.yarnReturn, self.reducemetrics, self.mapmetrics, self.sparkReturn, self.stormReturn
+        return self.systemReturn, self.yarnReturn, self.reducemetrics, self.mapmetrics, self.mrapp, self.sparkReturn, self.stormReturn
 
     def filterData(self, df, m=False):
         '''
@@ -481,20 +484,26 @@ class AdpEngine:
     def trainMethod(self):
         if str2Bool(self.train):
             print "Getting data ..."
-            systemReturn, yarnReturn, reducemetrics, mapmetrics, sparkReturn, stormReturn = self.getData()
+            checkpoint = str2Bool(self.checkpoint)
+            systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn = self.getData()
             #yarnReturn = self.filterData(yarnReturn) #todo
             if self.type == 'clustering':
                 if self.method in self.allowedMethodsClustering:
                     print "Training with selected method %s of type %s" % (self.method, self.type)
+                    if checkpoint:
+                        dataf = tempfile.NamedTemporaryFile(suffix='.csv')
+                        self.dformat.df2csv(yarnReturn, dataf.name)
+                        data = dataf.name
+                    else:
+                        dataf = os.path.join(self.dataDir, 'Final_Merge.csv')
+                        data = dataf
                     if self.method == 'skm':
                         print "Method %s settings detected -> %s" % (self.method, str(self.methodSettings))
                         opt = parseMethodSettings(self.methodSettings)
                         if not opt:
                             opt = ['-S', '10', '-N', '10']
-                        dataf = tempfile.NamedTemporaryFile(suffix='.csv')
-                        self.dformat.df2csv(yarnReturn, dataf.name)
                         try:
-                            self.dweka.simpleKMeansTrain(dataf=dataf.name, options=opt, mname=self.export)
+                            self.dweka.simpleKMeansTrain(dataf=data, options=opt, mname=self.export)
                         except Exception as inst:
                             print "Unable to run training for method %s exited with %s and %s" % (self.method, type(inst), inst.args)
                             logger.error('[%s] : [ERROR] Unable to run training for method %s exited with %s and %s',
@@ -506,10 +515,8 @@ class AdpEngine:
                         opt = parseMethodSettings(self.methodSettings)
                         if not opt:
                             opt = ["-I", "1000", "-N", "6",  "-M", "1.0E-6", "-num-slots", "1", "-S", "100"]
-                        dataf = tempfile.NamedTemporaryFile(suffix='.csv')
-                        self.dformat.df2csv(yarnReturn, dataf.name)
                         try:
-                            self.dweka.emTrain(dataf=dataf.name, options=opt, mname=self.export)
+                            self.dweka.emTrain(dataf=data, options=opt, mname=self.export)
                         except Exception as inst:
                             print "Unable to run training for method %s exited with %s and %s" % (
                             self.method, type(inst), inst.args)
@@ -523,10 +530,8 @@ class AdpEngine:
                         opt = parseMethodSettings(self.methodSettings)
                         if not opt:
                             opt = ["-E",  "0.9",  "-M", "6",  "-D", "weka.clusterers.forOPTICSAndDBScan.DataObjects.EuclideanDataObject"]
-                        dataf = tempfile.NamedTemporaryFile(suffix='.csv')
-                        self.dformat.df2csv(yarnReturn, dataf.name)
                         try:
-                            self.dweka.dbscanTrain(dataf=dataf.name, options=opt, mname=self.export)
+                            self.dweka.dbscanTrain(dataf=data, options=opt, mname=self.export)
                         except Exception as inst:
                             print "Unable to run training for method %s exited with %s and %s" % (
                                 self.method, type(inst), inst.args)
@@ -632,20 +637,26 @@ class AdpEngine:
 
     def detectAnomalies(self):
         if str2Bool(self.detect):
+            checkpoint = str2Bool(self.checkpoint)
             if self.type == 'clustering':
                 print "Collect data ..."
-                systemReturn, yarnReturn, reducemetrics, mapmetrics, sparkReturn, stormReturn = self.getData(detect=True)
+                systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn = self.getData(detect=True)
                 # yarnReturn = self.filterData(yarnReturn) #todo
+                if checkpoint:
+                    dataf = tempfile.NamedTemporaryFile(suffix='.csv')
+                    self.dformat.df2csv(yarnReturn, dataf.name)
+                    data = dataf.name
+                else:
+                    dataf = os.path.join(self.dataDir, 'Final_Merge.csv')
+                    data = dataf
                 if self.method in self.allowedMethodsClustering:
                     print "Detecting with selected method %s of type %s" % (self.method, self.type)
                     if os.path.isfile(os.path.join(self.modelsDir, self.modelName(self.method, self.load))):
                         print "Model found at %s" % str(
                             os.path.join(self.modelsDir, self.modelName(self.method, self.load)))
-                        dataf = tempfile.NamedTemporaryFile(suffix='.csv')
-                        self.dformat.df2csv(yarnReturn, dataf.name)
-                        anomalies = self.dweka.runclustermodel(self.method, self.load)
+                        anomalies = self.dweka.runclustermodel(self.method, self.load, data)
                         for e in anomalies:
-                            print ut2hum(e)
+                            # print ut2hum(e)
                             a = {"type": self.method, "time": ut2hum(e)}
                             self.reportAnomaly(a)
                     else:
@@ -680,7 +691,7 @@ class AdpEngine:
 
             threadPoint.start()
             threadTrain.start()
-            # threadDetect.start()
+            threadDetect.start()
         except Exception as inst:
             logger.error('[%s] : [ERROR] Exception %s with %s during point thread execution, halting',
                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
@@ -876,23 +887,23 @@ class AdpEngine:
         checkpoint = str2Bool(self.checkpoint)
         queue, queue_file = self.qConstructor.queueResourceString()
         cluster, cluster_file = self.qConstructor.clusterMetricsSring()
-        jvmMrapp, jvmMrapp_file = self.qConstructor.jvmMrappmasterString()
+        # jvmMrapp, jvmMrapp_file = self.qConstructor.jvmMrappmasterString()
         jvmResMng, jvmResMng_file = self.qConstructor.jvmResourceManagerString()
 
-        qjvmMrapp = self.qConstructor.jvmNNquery(jvmMrapp, tfrom, to, self.qsize, self.qinterval)
+        # qjvmMrapp = self.qConstructor.jvmNNquery(jvmMrapp, tfrom, to, self.qsize, self.qinterval)
         qqueue = self.qConstructor.resourceQueueQuery(queue, tfrom, to, self.qsize, self.qinterval)
         qcluster = self.qConstructor.clusterMetricsQuery(cluster, tfrom, to, self.qsize, self.qinterval)
         qjvmResMng = self.qConstructor.jvmNNquery(jvmResMng, tfrom, to, self.qsize, self.qinterval)
 
         gqueue = self.dmonConnector.aggQuery(qqueue)
         gcluster = self.dmonConnector.aggQuery(qcluster)
-        gjvmMrapp = self.dmonConnector.aggQuery(qjvmMrapp)
+        # gjvmMrapp = self.dmonConnector.aggQuery(qjvmMrapp)
         gjvmResourceManager = self.dmonConnector.aggQuery(qjvmResMng)
 
         if not checkpoint:
             self.dformat.dict2csv(gcluster, qcluster, cluster_file)
             self.dformat.dict2csv(gqueue, qqueue, queue_file)
-            self.dformat.dict2csv(gjvmMrapp, qjvmMrapp, jvmMrapp_file)
+            # self.dformat.dict2csv(gjvmMrapp, qjvmMrapp, jvmMrapp_file)
             self.dformat.dict2csv(gjvmResourceManager, qjvmResMng, jvmResMng_file)
 
             print "Starting cluster merge ..."
@@ -902,11 +913,11 @@ class AdpEngine:
         else:
             df_cluster = self.dformat.dict2csv(gcluster, qcluster, cluster_file, df=checkpoint)
             df_queue = self.dformat.dict2csv(gqueue, qqueue, queue_file, df=checkpoint)
-            df_jvmMrapp = self.dformat.dict2csv(gjvmMrapp, qjvmMrapp, jvmMrapp_file, df=checkpoint)
+            # df_jvmMrapp = self.dformat.dict2csv(gjvmMrapp, qjvmMrapp, jvmMrapp_file, df=checkpoint)
             df_jvmResourceManager = self.dformat.dict2csv(gjvmResourceManager, qjvmResMng, jvmResMng_file, df=checkpoint)
             print "Starting cluster merge ..."
             merged_cluster = self.dformat.chainMergeCluster(clusterMetrics=df_cluster, queue=df_queue,
-                                                                   jvmRM=df_jvmResourceManager, jvmmrapp=df_jvmMrapp)
+                                                                   jvmRM=df_jvmResourceManager)
             clusterReturn = merged_cluster
         print "Querying  Cluster metrics complete"
         logger.info('[%s] : [INFO] Querying  Name Node metrics complete',
@@ -1004,7 +1015,23 @@ class AdpEngine:
         print "Querying  Mapper metrics complete"
         logger.info('[%s] : [INFO] Querying  Mapper metrics complete',
                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
-        return lMP, lRD
+        print "Querying MRApp metrics ... "
+        logger.info('[%s] : [INFO] Querying  MRApp metrics ...',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        jvmMrapp, jvmMrapp_file = self.qConstructor.jvmMrappmasterString()
+
+        qjvmMrapp = self.qConstructor.jvmNNquery(jvmMrapp, tfrom, to, self.qsize, self.qinterval)
+        gjvmMrapp = self.dmonConnector.aggQuery(qjvmMrapp)
+
+        if not checkpoint:
+            self.dformat.dict2csv(gjvmMrapp, qjvmMrapp, jvmMrapp_file)
+            df_jvmMrapp = 0
+        else:
+            df_jvmMrapp = self.dformat.dict2csv(gjvmMrapp, qjvmMrapp, jvmMrapp_file, df=checkpoint)
+        logger.info('[%s] : [INFO] Querying  MRApp metrics complete',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        print "Querying MRApp metrics complete "
+        return lMP, lRD, df_jvmMrapp
 
     def getDataNode(self, nodes, detect=False):
         if detect:

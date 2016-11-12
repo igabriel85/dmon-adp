@@ -44,7 +44,12 @@ class dweka:
             cluster = self.loadClusterModel(model, method)
             clusterMembership = []
             for inst in data:
-                cl = cluster.cluster_instance(inst)
+                try:
+                    cl = cluster.cluster_instance(inst)
+                except Exception as inst:
+                    logger.error('[%s] : [ERROR] Mismatch model and data attributes',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+
                 dist = cluster.distribution_for_instance(inst)
                 print ("cluster=" + str(cl) + ", distribution=" + str(dist))
                 clusterMembership.append(cl)
