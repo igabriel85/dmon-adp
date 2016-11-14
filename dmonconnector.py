@@ -119,7 +119,7 @@ class Connector:
 
     def deleteIndex(self, indexName):
         try:
-            res = self.esInstance.delete(index=indexName, ignore=[400, 404])
+            res = self.esInstance.indices.delete(index=indexName, ignore=[400, 404])
             logger.info('[%s] : [INFO] Deleted index %s',
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), indexName)
         except Exception as inst:
