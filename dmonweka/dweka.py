@@ -39,7 +39,7 @@ class dweka:
     def runclustermodel(self, model, method, dataf, temp=True):
         anomalies = []
         try:
-            jvm.start()
+            jvm.start(max_heap_size=self.wHeap)
             data = self.loadData(dataf, temp)
             cluster = self.loadClusterModel(model, method)
             clusterMembership = []
@@ -59,10 +59,15 @@ class dweka:
             # print data.get_instance(3)
 
             pa = self.calcThreashold(dict(Counter(clusterMembership)), 21)
-            for a in pa:
-                # print data.get_instance(a).get_value(0)  #todo always set key as first atribute
-                anomalies.append(data.get_instance(a).get_value(0))
-            print "Detected using %s anomalies at timestamp(s) %s" % (model, str(anomalies))
+            if pa == 0:
+                logger.warning('[%s] : [WARN] Most instances are computed as anomalies, possible error encountered!',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'),)
+                print "Most instances are computed as anomalies, possible error encountered!"
+            else:
+                for a in pa:
+                    # print data.get_instance(a).get_value(0)  #todo always set key as first atribute
+                    anomalies.append(data.get_instance(a).get_value(0))
+                print "Detected using %s anomalies at timestamp(s) %s" % (model, str(anomalies))
         except Exception, e:
             print(traceback.format_exc())
         finally:
@@ -82,7 +87,7 @@ class dweka:
         :return:
         '''
         try:
-            jvm.start()
+            jvm.start(max_heap_size=self.wHeap)
             data = self.loadData(dataf, temp=True)
             clusterer = Clusterer(classname="weka.clusterers.SimpleKMeans", options=options)
             clusterer.build_clusterer(data)
@@ -111,7 +116,7 @@ class dweka:
         '''
 
         try:
-            jvm.start()
+            jvm.start(max_heap_size=self.wHeap)
             data = self.loadData(dataf, temp)
             clusterDBSCAN = Clusterer(classname="weka.clusterers.DBSCAN", options=options)
             clusterDBSCAN.build_clusterer(data)
@@ -137,7 +142,7 @@ class dweka:
         :return:
         '''
         try:
-            jvm.start()
+            jvm.start(max_heap_size=self.wHeap)
             data = self.loadData(dataf, temp)
             clusterEM = Clusterer(classname="weka.clusterers.EM",
                               options=options)

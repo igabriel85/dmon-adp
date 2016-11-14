@@ -36,14 +36,14 @@ class AdpEngine:
         self.dataDir = dataDir
         self.modelsDir = modelsDir
         self.anomalyIndex = "anomalies"
-        self.dmonConnector = Connector(self.esendpoint)
-        self.qConstructor = QueryConstructor()
-        self.dformat = DataFormatter(self.dataDir)
-        self.dweka = dweka(self.dataDir, self.modelsDir)
         self.regnodeList = []
         self.allowedMethodsClustering = ['skm', 'em', 'dbscan']
         self.allowefMethodsClassification = []  # TODO
         self.heap = settingsDict['heap']
+        self.dmonConnector = Connector(self.esendpoint)
+        self.qConstructor = QueryConstructor()
+        self.dformat = DataFormatter(self.dataDir)
+        self.dweka = dweka(self.dataDir, self.modelsDir, wHeap=self.heap)
         self.cfilter = settingsDict['cfilter']
         self.rfilter = settingsDict['rfilter']
         self.dfilter = settingsDict['dfilter']
