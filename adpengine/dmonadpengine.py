@@ -1,8 +1,6 @@
-import os
 from dmonconnector import *
 from dmonpoint import *
 from util import queryParser, nodesParse, str2Bool, cfilterparse, rfilterparse, pointThraesholds, parseDelay, parseMethodSettings, ut2hum
-import pandas as pd
 from threadRun import AdpDetectThread, AdpPointThread, AdpTrainThread
 from dmonweka import dweka
 from time import sleep
@@ -58,6 +56,8 @@ class AdpEngine:
         self.mapmetrics = 0
         self.reducemetrics = 0
         self.mrapp = 0
+        self.dataNodeTraining = 0
+        self.dataNodeDetecting = 0
 
     def initConnector(self):
         print "Establishing connection with dmon ....."
@@ -651,6 +651,11 @@ class AdpEngine:
                 # if list(set(self.dformat.fmHead) - set(list(yarnReturn.columns.values))):
                 #     print "Mismatch between desired and loaded data"
                 #     sys.exit()
+                # if self.dataNodeTraining != self.dataNodeDetecting:
+                #     print "Detected datanode discrepancies; training %s, detecting %s" %(self.dataNodeTraining, self.dataNodeDetecting)
+                #     logger.error('[%s] : [ERROR]Detected datanode discrepancies; training %s, detecting %s',
+                #          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.dataNodeTraining, self.dataNodeDetecting)
+                #     sys.exit(1)
                 yarnReturn = self.filterData(yarnReturn) #todo
                 if checkpoint:
                     dataf = tempfile.NamedTemporaryFile(suffix='.csv')
@@ -1072,6 +1077,10 @@ class AdpEngine:
                 logger.info('[%s] : [INFO] Empty response from  %s no datanode metrics!',
                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), node)
         print "Querying  Data Node metrics complete"
+        if detect:
+            self.dataNodeDetecting = len(lDN)
+        else:
+            self.dataNodeTraining = len(lDN)
         logger.info('[%s] : [INFO] Querying  Data Node metrics complete',
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
 
