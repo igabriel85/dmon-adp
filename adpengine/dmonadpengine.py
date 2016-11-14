@@ -493,7 +493,7 @@ class AdpEngine:
             print "Getting data ..."
             checkpoint = str2Bool(self.checkpoint)
             systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn = self.getData()
-            #yarnReturn = self.filterData(yarnReturn) #todo
+            yarnReturn = self.filterData(yarnReturn) #todo
             if self.type == 'clustering':
                 if self.method in self.allowedMethodsClustering:
                     print "Training with selected method %s of type %s" % (self.method, self.type)
@@ -648,7 +648,10 @@ class AdpEngine:
             if self.type == 'clustering':
                 print "Collect data ..."
                 systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn = self.getData(detect=True)
-                # yarnReturn = self.filterData(yarnReturn) #todo
+                # if list(set(self.dformat.fmHead) - set(list(yarnReturn.columns.values))):
+                #     print "Mismatch between desired and loaded data"
+                #     sys.exit()
+                yarnReturn = self.filterData(yarnReturn) #todo
                 if checkpoint:
                     dataf = tempfile.NamedTemporaryFile(suffix='.csv')
                     self.dformat.df2csv(yarnReturn, dataf.name)
@@ -670,6 +673,7 @@ class AdpEngine:
                         logger.error('[%s] : [ERROR] Model %s not found at %s ',
                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.load,
                                  str(os.path.join(self.modelsDir, self.modelName(self.method, self.load))))
+                        print "Model not found %s" % self.modelName(self.method, self.load)
                         sys.exit(1)
                 else:
                     print "Unknown method %s of type %s" % (self.method, self.type)
@@ -692,9 +696,9 @@ class AdpEngine:
 
     def run(self, engine):
         try:
-            threadPoint = AdpPointThread(engine, 'Thread Point')
-            threadTrain = AdpTrainThread(engine, 'Thread Train')
-            threadDetect = AdpDetectThread(engine, 'Thread Detect')
+            threadPoint = AdpPointThread(engine, 'Point')
+            threadTrain = AdpTrainThread(engine, 'Train')
+            threadDetect = AdpDetectThread(engine, 'Detect')
 
             threadPoint.start()
             threadTrain.start()

@@ -33,6 +33,7 @@ class DataFormatter:
 
     def __init__(self, dataDir):
         self.dataDir = dataDir
+        self.fmHead = 0
 
     def getJson(self):
         return 'load Json'
@@ -397,6 +398,7 @@ class DataFormatter:
         # merged_df.set_index('key', inplace=True)
         #self.dropMissing(merged_df)
         self.fillMissing(merged_df)
+        self.fmHead = list(merged_df.columns.values)
         return merged_df
 
     def dict2csv(self, response, query, filename, df=False):
