@@ -721,6 +721,9 @@ class AdpEngine:
         return "Compare models"
 
     def reportAnomaly(self, body):
+        now = datetime.utcnow()
+        itime = now.strftime("%Y-%m-%dT%H:%M:%S") + ".%03d" % (now.microsecond / 1000) + "Z"
+        body["timestamp"] = itime
         self.dmonConnector.pushAnomaly(anomalyIndex=self.anomalyIndex, doc_type='anomaly', body=body)
 
     def getDFS(self, detect=False):
