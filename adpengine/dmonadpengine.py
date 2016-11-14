@@ -32,6 +32,7 @@ class AdpEngine:
         self.smemory = settingsDict['smemory']
         self.snetwork = settingsDict['snetwork']
         self.methodSettings = settingsDict['MethodSettings']
+        self.resetIndex = settingsDict['resetindex']
         self.dataDir = dataDir
         self.modelsDir = modelsDir
         self.anomalyIndex = "anomalies"
@@ -87,6 +88,12 @@ class AdpEngine:
         self.regnodeList = self.dmonConnector.getNodeList()
         print "Nodes found -> %s" %self.regnodeList
         self.desiredNodesList = self.getDesiredNodes()
+        if str2Bool(self.resetIndex):
+            print "Reseting index %s" %self.anomalyIndex
+            self.dmonConnector.deleteIndex(self.anomalyIndex)
+            logger.warning('[%s] : [WARN] Reset index %s complete',
+                           datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.anomalyIndex)
+            print "Reseting index %s complete" % self.anomalyIndex
 
     def getDesiredNodes(self):
         desNodes = []
@@ -696,7 +703,6 @@ class AdpEngine:
             logger.error('[%s] : [ERROR] Exception %s with %s during point thread execution, halting',
                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
             sys.exit(1)
-
         return 0
 
     def modelName(self, methodname, modelName):

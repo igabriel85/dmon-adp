@@ -63,7 +63,8 @@ def main(argv):
         "heap": None,
         "checkpoint": None,
         "delay": None,
-        "interval": None
+        "interval": None,
+        "resetindex": None
     }
 
     # Only for testing
@@ -482,7 +483,17 @@ def main(argv):
         logger.info('[%s] : [INFO] Interval is  set to %s',
                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['interval'])
 
-
+    if settings["resetindex"] is None:
+        try:
+            print "Reset index set to %s" % readCnf['Misc']['resetindex']
+            settings["resetindex"] = readCnf['Misc']['resetindex']
+        except:
+            print "Reset index not set, skipping."
+            settings["resetindex"] = False
+    else:
+        print "Reset index set to %s" % settings["resetindex"]
+    logger.info('[%s] : [INFO] Reset index set to %s"',
+                datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['resetindex'])
 
     #if settings["esendpoint"] == None:
 
@@ -530,7 +541,7 @@ def main(argv):
     # engine.trainMethod()
     # engine.detectAnomalies(30)
     # engine.printTest()
-
+    print "\n"
     print "#" * 100
 
 
