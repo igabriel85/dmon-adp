@@ -5,6 +5,7 @@ from threadRun import AdpDetectThread, AdpPointThread, AdpTrainThread
 from dmonweka import dweka
 from time import sleep
 import tempfile
+from dmonscikit import dmonscilearncluster as sdmon
 
 class AdpEngine:
     def __init__(self, settingsDict, dataDir, modelsDir):
@@ -35,7 +36,7 @@ class AdpEngine:
         self.modelsDir = modelsDir
         self.anomalyIndex = "anomalies"
         self.regnodeList = []
-        self.allowedMethodsClustering = ['skm', 'em', 'dbscan']
+        self.allowedMethodsClustering = ['skm', 'em', 'dbscan', 'sdbscan', 'isoforest']
         self.allowefMethodsClassification = []  # TODO
         self.heap = settingsDict['heap']
         self.dmonConnector = Connector(self.esendpoint)
@@ -547,6 +548,16 @@ class AdpEngine:
                                          type(inst), inst.args)
                             sys.exit(1)
                         print "Saving model with name %s" % self.modelName(self.method, self.export)
+                    elif self.method == 'sdbscan':
+                        db = sdmon.SciCluster(self.modelsDir, yarnReturn)
+                        settings = self.methodSettings
+                        dbmodel = db.sdbscanTrain(settings=settings, mname=self.export)
+                        print "sdbscan" # todo
+                    elif self.method == 'isoforest':
+                        isofrst = sdmon.SciCluster(self.modelsDir, yarnReturn)
+                        settings = self.modeSettings
+                        isofrstmodel = isofrst.isolationForest(settings=settings, mname=self.export)
+                        print "isoforest" # todo
 
                     # Once training finished set training to false
                     self.train = False
@@ -696,7 +707,7 @@ class AdpEngine:
         else:
             print "Detect is set to false, skipping..."
             logger.warning('[%s] : [WARN] Detect is set to false, skipping...',
-                       datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(self.detect))
+                       datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
         sleep(parseDelay(self.interval))
 
     def run(self, engine):
