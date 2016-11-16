@@ -4,14 +4,14 @@ import os
 import datetime
 
 logger = logging.getLogger("ADP Log")
-logger.setLevel(logging.WARNING)
+logger.setLevel(logging.WARN)
 
 loggerESt = logging.getLogger('elasticsearch.trace')
-loggerESt.setLevel(logging.WARNING)
+loggerESt.setLevel(logging.WARN)
 loggerES = logging.getLogger('elasticsearch')
-loggerES.setLevel(logging.WARNING)
+loggerES.setLevel(logging.WARN)
 loggerurl3 = logging.getLogger("urllib3")
-loggerurl3.setLevel(logging.WARNING)
+loggerurl3.setLevel(logging.WARN)
 
 
 # add a rotating handler
