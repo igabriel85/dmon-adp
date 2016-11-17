@@ -348,7 +348,7 @@ def main(argv):
 
     try:
         print "Settings for method %s: " % settings['method']
-        settings['MethodSettings'] = {}
+        settings['MethodSettings'] = {}   #todo read settings from commandline ?
         for name, value in readCnf['MethodSettings'].iteritems():
             print "%s -> %s" % (name, value)
             settings['MethodSettings'][name] = value

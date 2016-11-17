@@ -16,11 +16,10 @@ from util import ut2hum
 
 
 class SciCluster:
-    def __init__(self, modelDir, data):
+    def __init__(self, modelDir):
         self.modelDir = modelDir
-        self.data = data
 
-    def sdbscanTrain(self, settings, mname):
+    def sdbscanTrain(self, settings, mname, data):
         '''
         :param data: -> dataframe with data
         :param settings: -> settings dictionary
@@ -29,7 +28,7 @@ class SciCluster:
         :example settings: -> {eps:0.9, min_samples:10, metric:'euclidean' ,
         algorithm:'auto, leaf_size:30, p:0.2, n_jobs:1}
         '''
-        sdata = StandardScaler().fit_transform(self.data)
+        sdata = StandardScaler().fit_transform(data)
         try:
             db = DBSCAN(eps=settings['eps'], min_samples=settings['min_samples'], metric=settings['metric'],
                         algorithm=settings['algorithm'], leaf_size=settings['leaf_size'], p=settings['p'],
@@ -46,7 +45,7 @@ class SciCluster:
         self.__serializemodel(db, 'sdbscan', mname)
         return db
 
-    def isolationForest(self, settings, mname):
+    def isolationForest(self, settings, mname, data):
         '''
         :param settings: -> settings dictionary
         :param mname: -> name of serialized cluster
@@ -66,15 +65,21 @@ class SciCluster:
             print "Error while  instanciating isolation forest with %s and %s" % (type(inst), inst.args)
             sys.exit(1)
         # clf = IsolationForest(max_samples=100, random_state=rng)
-        print "*&*&*&& %s" % type(self.data)
-        clf.fit(self.data)
+        print "*&*&*&& %s" % type(data)
+        clf.fit(data)
         print clf.contamination
-        predict = clf.predict(self.data)
+        predict = clf.predict(data)
         print predict
         self.__serializemodel(clf, 'isoforest', mname)
         return clf
 
     def detect(self, method, model, data):
+        '''
+        :param method: -> method name
+        :param model: -> trained clusterer
+        :param data: -> dataframe with data
+        :return: -> dictionary that contains the list of anomalous timestamps
+        '''
         smodel = self.__loadClusterModel(method, model)
         if not smodel:
             pass
@@ -114,15 +119,28 @@ class SciCluster:
             #  }
         anomaliesDict = {}
         anomaliesDict['anomalies'] = anomalieslist
+        logger.info('[%s] : [INFO] Detected anomalies with model %s using method %s are -> %s',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), model, method, str(anomaliesDict))
         return anomaliesDict
 
     def __serializemodel(self, model, method, mname):
+        '''
+        :param model: -> model
+        :param method: -> method name
+        :param mname: -> name to be used for saved model
+        :result: -> Serializez current clusterer/classifier
+        '''
         fpath = "%s_%s.pkl" % (method, mname)
         fname = os.path.join(self.modelDir, fpath)
         pickle.dump(model, open(fname, "wb"))
         print 'Saved sdbscan model at %s' % fpath
 
     def __loadClusterModel(self, method, model):
+        '''
+        :param method: -> method name
+        :param model: -> model name
+        :return: -> instance of serialized object
+        '''
         lmodel = glob.glob(os.path.join(self.modelDir, ("%s_%s.pkl" % (method, model))))
         if not lmodel:
             print "No %s model with the name %s found" %(method, model)
