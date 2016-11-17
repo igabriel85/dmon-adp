@@ -549,16 +549,24 @@ class AdpEngine:
                             sys.exit(1)
                         print "Saving model with name %s" % self.modelName(self.method, self.export)
                     elif self.method == 'sdbscan':
-                        db = sdmon.SciCluster(self.modelsDir, yarnReturn)
-                        settings = self.methodSettings
-                        dbmodel = db.sdbscanTrain(settings=settings, mname=self.export)
-                        print "sdbscan" # todo
+                        opt = self.methodSettings
+                        if not opt:
+                            opt = {'eps': 0.9, 'min_samples': 10, 'metric': 'euclidean',
+                                   'algorithm': 'auto', 'leaf_size': 30, 'p': 0.2, 'n_jobs': 1}
+                        print "Using settings for sdbscan -> %s" % str(opt)
+                        logger.info('[%s] : [INFO] Using settings for sdbscan -> %s ',
+                                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(opt))
+                        db = sdmon.SciCluster(self.modelsDir)
+                        dbmodel = db.sdbscanTrain(settings=opt, mname=self.export, data=yarnReturn)
                     elif self.method == 'isoforest':
-                        isofrst = sdmon.SciCluster(self.modelsDir, yarnReturn)
-                        settings = self.modeSettings
-                        isofrstmodel = isofrst.isolationForest(settings=settings, mname=self.export)
-                        print "isoforest" # todo
-
+                        opt = self.methodSettings
+                        if not opt:
+                            opt = {'n_estimators': 100, 'max_samples': 100, 'contamination': 0.01, 'bootstrap': False, 'max_features': 1.0, 'n_jobs': -1, 'random_state': None, 'verbose': 0}
+                        print "Using settings for isoForest -> %s" % str(opt)
+                        logger.info('[%s] : [INFO] Using settings for isoForest -> %s ',
+                                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(opt))
+                        isofrst = sdmon.SciCluster(self.modelsDir)
+                        isofrstmodel = isofrst.isolationForest(settings=opt, mname=self.export, data=yarnReturn)
                     # Once training finished set training to false
                     self.train = False
                     return self.modelName(self.method, self.export)
@@ -680,11 +688,19 @@ class AdpEngine:
                     if os.path.isfile(os.path.join(self.modelsDir, self.modelName(self.method, self.load))):
                         print "Model found at %s" % str(
                             os.path.join(self.modelsDir, self.modelName(self.method, self.load)))
-                        anomalies = self.dweka.runclustermodel(self.method, self.load, data)
-                        for e in anomalies:
+                        wekaList = ['skm', 'em', 'dbscan']
+                        if self.method in wekaList:
+                            anomalies = self.dweka.runclustermodel(self.method, self.load, data)
                             # print ut2hum(e)
-                            a = {"type": self.method, "time": ut2hum(e)}
+                            a = {"method": self.method, "qinterval": self.qinterval, "anomalies": anomalies}
                             self.reportAnomaly(a)
+                        else:
+                            smodel = sdmon.SciCluster(modelDir=self.modelDir)
+                            anomalies = smodel.detect(self.method, self.load, yarnReturn)
+                            anomalies['method'] = self.method
+                            anomalies['qinterval'] = self.qinterval
+                            self.reportAnomaly(anomalies)
+
                     else:
                         logger.error('[%s] : [ERROR] Model %s not found at %s ',
                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.load,
