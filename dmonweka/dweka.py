@@ -43,6 +43,7 @@ class dweka:
             data = self.loadData(dataf, temp)
             cluster = self.loadClusterModel(model, method)
             clusterMembership = []
+            print cluster.number_of_clusters
             for inst in data:
                 try:
                     cl = cluster.cluster_instance(inst)

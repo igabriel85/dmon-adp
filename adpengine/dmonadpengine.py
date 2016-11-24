@@ -7,6 +7,7 @@ from time import sleep
 import tempfile
 from dmonscikit import dmonscilearncluster as sdmon
 
+
 class AdpEngine:
     def __init__(self, settingsDict, dataDir, modelsDir):
         self.esendpoint = settingsDict['esendpoint']
@@ -550,7 +551,7 @@ class AdpEngine:
                         print "Saving model with name %s" % self.modelName(self.method, self.export)
                     elif self.method == 'sdbscan':
                         opt = self.methodSettings
-                        if not opt:
+                        if not opt or 'leaf_size' not in opt:
                             opt = {'eps': 0.9, 'min_samples': 10, 'metric': 'euclidean',
                                    'algorithm': 'auto', 'leaf_size': 30, 'p': 0.2, 'n_jobs': 1}
                         print "Using settings for sdbscan -> %s" % str(opt)
@@ -560,7 +561,7 @@ class AdpEngine:
                         dbmodel = db.sdbscanTrain(settings=opt, mname=self.export, data=yarnReturn)
                     elif self.method == 'isoforest':
                         opt = self.methodSettings
-                        if not opt:
+                        if not opt or 'contamination' not in opt:
                             opt = {'n_estimators': 100, 'max_samples': 100, 'contamination': 0.01, 'bootstrap': False, 'max_features': 1.0, 'n_jobs': -1, 'random_state': None, 'verbose': 0}
                         print "Using settings for isoForest -> %s" % str(opt)
                         logger.info('[%s] : [INFO] Using settings for isoForest -> %s ',
@@ -650,16 +651,16 @@ class AdpEngine:
                 # print dict_system
                 for th in all:
                     for type, val in th.iteritems():
+                        responseD = {}
                         if val['bound'] == 'gd':
                             anomalies = self.adppoint.detpoint(dict_system, type=type, threashold=val['threashold'], lt=False)
-                            for a in anomalies:
-                                self.reportAnomaly(a)
-                                sleep(parseDelay(self.delay))
+                            responseD['anomalies'] = anomalies
+                            self.reportAnomaly(responseD)
                         else:
                             anomalies = self.adppoint.detpoint(dict_system, type=type, threashold=val['threashold'], lt=True)
-                            for a in anomalies:
-                                self.reportAnomaly(a)
-                                sleep(parseDelay(self.delay))
+                            responseD['anomalies'] = anomalies
+                            self.reportAnomaly(responseD)
+                        sleep(parseDelay(self.delay))
 
     def detectAnomalies(self):
         if str2Bool(self.detect):
