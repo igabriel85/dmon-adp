@@ -11,7 +11,7 @@ class AdpFeatureSelector:
     def __init__(self):
         self.author = 'Constructor for dmon-adp  feature selection methods'
 
-    def varianceSelection(df, threashold=.8):
+    def varianceSelection(self, df, threashold=.8):
         if not isinstance(df, pandas.core.frame.DataFrame):
             logger.error('[%s] : [ERROR] Variance selection only possible on Dataframe not %s',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(df))
@@ -19,3 +19,4 @@ class AdpFeatureSelector:
         sel = VarianceThreshold(threshold=(threashold * (1 - threashold)))
         sel.fit_transform(df)
         return df[[c for (s, c) in zip(sel.get_support(), df.columns.values) if s]]
+

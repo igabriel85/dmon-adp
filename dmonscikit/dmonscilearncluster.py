@@ -84,10 +84,10 @@ class SciCluster:
             print "Error while  instanciating isolation forest with %s and %s" % (type(inst), inst.args)
             sys.exit(1)
         # clf = IsolationForest(max_samples=100, random_state=rng)
-        print "*&*&*&& %s" % type(data)
+        # print "*&*&*&& %s" % type(data)
         clf.fit(data)
-        print clf.contamination
         predict = clf.predict(data)
+        print "Anomaly Array:"
         print predict
         self.__serializemodel(clf, 'isoforest', mname)
         return clf
@@ -152,7 +152,7 @@ class SciCluster:
         fpath = "%s_%s.pkl" % (method, mname)
         fname = os.path.join(self.modelDir, fpath)
         pickle.dump(model, open(fname, "wb"))
-        print 'Saved sdbscan model at %s' % fpath
+        print 'Saved %s model at %s' %(method, fpath)
 
     def __loadClusterModel(self, method, model):
         '''

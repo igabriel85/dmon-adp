@@ -7,6 +7,7 @@ flags.DEFINE_string('data_dir', '/tmp/data/', 'Directory for storing data')
 
 mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
 
+print mnist[0]
 sess = tf.InteractiveSession()
 
 #Create Model
