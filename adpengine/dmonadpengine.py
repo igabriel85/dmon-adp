@@ -432,8 +432,25 @@ class AdpEngine:
             print "Spark metrics" #todo
             self.sparkReturn = 0
         elif 'storm' in queryd:
-            print "Storm metrics" #todo
-            self.stormReturn = 0
+            print "Starting query for storm metrics"
+            stormTopology = self.dmonConnector.getStormTopology()
+            try:
+                bolts = stormTopology['bolts']
+                spouts = stormTopology['spouts']
+                topology = stormTopology['Topology']
+            except Exception as inst:
+                logger.error('[%s] : [ERROR] No Storm topology found with %s',
+                                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(stormTopology))
+                sys.exit(1)
+            storm, storm_file = self.qConstructor.stormString()
+            qstorm = self.qConstructor.stormQuery(storm, tfrom, to, self.qsize, self.qinterval, bolts=bolts, spouts=spouts)
+            gstorm = self.dmonConnector.aggQuery(qstorm)
+            if not checkpoint:
+                self.dformat.dict2csv(gstorm, qstorm, storm_file)
+                self.stormReturn = 0
+            else:
+                df_storm = self.dformat.dict2csv(gstorm, qstorm, storm_file, df=checkpoint)
+                self.stormReturn = df_storm
 
         return self.systemReturn, self.yarnReturn, self.reducemetrics, self.mapmetrics, self.mrapp, self.sparkReturn, self.stormReturn
 
@@ -494,7 +511,13 @@ class AdpEngine:
         if str2Bool(self.train):
             print "Getting data ..."
             checkpoint = str2Bool(self.checkpoint)
+            queryd = queryParser(self.query)
             systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn = self.getData()
+            if 'yarn' in queryd:
+                udata = yarnReturn
+            elif 'storm' in queryd:
+                udata = stormReturn #todo important implement storm, spark, cassandra and mongodb switching
+
             yarnReturn = self.filterData(yarnReturn) #todo
             if self.type == 'clustering':
                 if self.method in self.allowedMethodsClustering:
