@@ -446,7 +446,12 @@ class DataFormatter:
         cheaders = []
         if query['aggs'].values()[0].values()[1].values()[0].values()[0].values()[0] == "type_instance.raw":
             logger.debug('[%s] : [DEBUG] Detected Memory type query', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
-            cheaders = requiredMetrics[0].keys()
+            try:
+                cheaders = requiredMetrics[0].keys()
+            except IndexError:
+                logger.error('[%s] : [ERROR] Empty response detected from DMon, stoping detection, check DMon.', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+                print "Empty response detected from DMon, stoping detection, check DMon"
+                sys.exit(1)
         else:
             kvImp = {}
 
