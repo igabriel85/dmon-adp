@@ -510,8 +510,9 @@ class DataFormatter:
             jvm.start()
             convertCsvtoArff(dataIn, dataOut)
         except Exception as inst:
-            logger.error('[%s] : [ERROR] Exception occured while converting to arff with %s and %s', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+            pass
         finally:
+            logger.error('[%s] : [ERROR] Exception occured while converting to arff with %s and %s', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
             jvm.stop()
         logger.info('[%s] : [INFO] Finished conversion of %s to %s', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), dataIn, dataOut)
 
@@ -538,6 +539,19 @@ class DataFormatter:
             df = pd.read_csv(f)
             dfList.append(df)
         return dfList
+
+    def toDF(self, fileName):
+        '''
+        :param fileName: absolute path to file
+        :return: dataframe
+        '''
+        if not os.path.isfile(fileName):
+            print "File %s does not exist, cannot load data! Exiting ..." % str(fileName)
+            logger.error('[%s] : [ERROR] File %s does not exist',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(fileName))
+            sys.exit(1)
+        df = pd.read_csv(fileName)
+        return df
 
     def df2BytesIO(self, df):
         out = io.BytesIO()

@@ -513,21 +513,47 @@ class AdpEngine:
             checkpoint = str2Bool(self.checkpoint)
             queryd = queryParser(self.query)
             systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn = self.getData()
-            if 'yarn' in queryd:
-                udata = yarnReturn
-            elif 'storm' in queryd:
-                udata = stormReturn #todo important implement storm, spark, cassandra and mongodb switching
-
-            yarnReturn = self.filterData(yarnReturn) #todo
+            if not checkpoint:
+                if 'yarn' in queryd:
+                    udata = self.dformat.toDF(os.path.join(self.dataDir, 'Final_Merge.csv'))
+                elif 'storm' in queryd:
+                    udata = self.dformat.toDF(os.path.join(self.dataDir, 'Storm.csv'))
+                elif 'cassandra' in queryd:
+                    return "not yet implemented"  # todo
+                elif 'mongodb' in queryd:
+                    return "not yet implemented"  # todo
+                elif 'spark' in queryd:
+                    return "not yet implemented"  # todo
+            else:
+                if 'yarn' in queryd:
+                    udata = yarnReturn
+                elif 'storm' in queryd:
+                    udata = stormReturn #todo important implement storm, spark, cassandra and mongodb switching
+                elif 'cassandra' in queryd:
+                    return "not yet implemented"  # todo
+                elif 'mongodb' in queryd:
+                    return "not yet implemented"  # todo
+                elif 'spark' in queryd:
+                    return "not yet implemented"  # todo
+            udata = self.filterData(udata) #todo check
             if self.type == 'clustering':
                 if self.method in self.allowedMethodsClustering:
                     print "Training with selected method %s of type %s" % (self.method, self.type)
                     if checkpoint:
                         dataf = tempfile.NamedTemporaryFile(suffix='.csv')
-                        self.dformat.df2csv(yarnReturn, dataf.name)
+                        self.dformat.df2csv(udata, dataf.name)
                         data = dataf.name
                     else:
-                        dataf = os.path.join(self.dataDir, 'Final_Merge.csv')
+                        if 'yarn' in queryd:
+                            dataf = os.path.join(self.dataDir, 'Final_Merge.csv')
+                            if not os.path.isfile(dataf):
+                                print "File %s does not exist, cannot load data! Exiting ..." % str(dataf)
+                                logger.error('[%s] : [ERROR] File %s does not exist',
+                                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'),
+                                             str(dataf))
+                                sys.exit(1)
+                        elif 'storm' in queryd:
+                            dataf = os.path.join(self.dataDir, 'Storm.csv')
                         data = dataf
                     if self.method == 'skm':
                         print "Method %s settings detected -> %s" % (self.method, str(self.methodSettings))
@@ -581,7 +607,7 @@ class AdpEngine:
                         logger.info('[%s] : [INFO] Using settings for sdbscan -> %s ',
                                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(opt))
                         db = sdmon.SciCluster(self.modelsDir)
-                        dbmodel = db.sdbscanTrain(settings=opt, mname=self.export, data=yarnReturn)
+                        dbmodel = db.sdbscanTrain(settings=opt, mname=self.export, data=udata)
                     elif self.method == 'isoforest':
                         opt = self.methodSettings
                         if not opt or 'contamination' not in opt:
@@ -590,7 +616,7 @@ class AdpEngine:
                         logger.info('[%s] : [INFO] Using settings for isoForest -> %s ',
                                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(opt))
                         isofrst = sdmon.SciCluster(self.modelsDir)
-                        isofrstmodel = isofrst.isolationForest(settings=opt, mname=self.export, data=yarnReturn)
+                        isofrstmodel = isofrst.isolationForest(settings=opt, mname=self.export, data=udata)
                     # Once training finished set training to false
                     self.train = False
                     return self.modelName(self.method, self.export)
