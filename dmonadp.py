@@ -495,6 +495,14 @@ def main(argv):
     logger.info('[%s] : [INFO] Reset index set to %s"',
                 datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['resetindex'])
 
+    try:
+        print "DMon Port is set to %s" % readCnf['Connector']['dmonport']
+        settings['dmonPort'] = readCnf['Connector']['dmonport']
+    except:
+        print "DMon Port is set to default %s" % str(5001)
+    logger.info('[%s] : [INFO] DMon Port is set to %s"',
+                datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(settings['dmonPort']))
+
     #if settings["esendpoint"] == None:
 
     #dmonC = Connector('85.120.206.27')

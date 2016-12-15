@@ -40,7 +40,7 @@ class AdpEngine:
         self.allowedMethodsClustering = ['skm', 'em', 'dbscan', 'sdbscan', 'isoforest']
         self.allowefMethodsClassification = []  # TODO
         self.heap = settingsDict['heap']
-        self.dmonConnector = Connector(self.esendpoint)
+        self.dmonConnector = Connector(self.esendpoint, dmonPort=self.dmonPort)
         self.qConstructor = QueryConstructor()
         self.dformat = DataFormatter(self.dataDir)
         self.dweka = dweka(self.dataDir, self.modelsDir, wHeap=self.heap)
