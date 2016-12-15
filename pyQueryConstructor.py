@@ -120,6 +120,26 @@ class QueryConstructor():
         file = 'Storm.csv'
         return qstring, file
 
+    def cassandraCounterString(self, host):
+        qstring = "plugin:\"GenericJMX\" AND collectd_type:\"counter\" host:\"%s\"" % host
+        file = "Cassandra_counter_%s.csv" % host
+        return qstring, file
+
+    def cassandraGaugeString(self, host):
+        qstring = "plugin:\"GenericJMX\" AND collectd_type:\"gauge\" host:\"%s\"" % host
+        file = "Cassandra_gauge_%s.csv" % host
+        return qstring, file
+
+    def mongodbCounterString(self, host):
+        qstring = "plugin:mongo AND collectd_type:counter AND host:\"%s\"" % host
+        file = "MongoDB_Counter_%s.csv" % host
+        return qstring, file
+
+    def mongodbGaugeString(self, host):
+        qstring = "plugin:mongo AND collectd_type:gauge AND host:\"%s\"" % host
+        file = "MongoDB_Gauge_%s.csv" % host
+        return qstring, file
+
     def loadAverage(self):  # TODO
         return "Average load across all nodes!"
 
@@ -721,7 +741,6 @@ class QueryConstructor():
         cquery.aggs["1"].date_histogram.extended_bounds.max = qlte
 
         #Storm metrics
-
         cquery.aggs["1"].aggs["2"].avg.field = "executorsTotal"
         cquery.aggs["1"].aggs["3"].avg.field = "msgTimeout"
         cquery.aggs["1"].aggs["4"].avg.field = "tasksTotal"
@@ -777,6 +796,83 @@ class QueryConstructor():
         cqueryd = cquery.to_dict()
         return cqueryd
 
+    def cassandraQuery(self, qstring, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
+                            qmin_doc_count=1):
+        cquery = Dict()
+        cquery.query.filtered.query.query_string.query = qstring
+        cquery.query.filtered.query.query_string.analyze_wildcard = wildCard
+        cquery.query.filtered.filter.bool.must = [
+            {"range": {"@timestamp": {"gte": qgte, "lte": qlte, "format": qtformat}}}]
+        cquery.query.filtered.filter.bool.must_not = []
+        cquery.size = qsize
+
+        cquery.aggs["1"].date_histogram.field = "@timestamp"
+        cquery.aggs["1"].date_histogram.interval = qinterval
+        cquery.aggs["1"].date_histogram.time_zone = "Europe/Helsinki"
+        cquery.aggs["1"].date_histogram.min_doc_count = qmin_doc_count
+        cquery.aggs["1"].date_histogram.extended_bounds.min = qgte
+        cquery.aggs["1"].date_histogram.extended_bounds.max = qlte
+
+        #Cassandra Metrics
+        cquery.aggs["1"].aggs["3"].terms.field = "type_instance"
+        cquery.aggs["1"].aggs["3"].terms.size = 0
+        cquery.aggs["1"].aggs["3"].terms.order["1"] = "desc"
+        cquery.aggs["1"].aggs["3"].aggs["1"].avg.field = "value"
+
+        cqueryd = cquery.to_dict()
+        return cqueryd
+
+    def mongoDBCounterQuery(self, qstring, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
+                            qmin_doc_count=1):
+        cquery = Dict()
+        cquery.query.filtered.query.query_string.query = qstring
+        cquery.query.filtered.query.query_string.analyze_wildcard = wildCard
+        cquery.query.filtered.filter.bool.must = [
+            {"range": {"@timestamp": {"gte": qgte, "lte": qlte, "format": qtformat}}}]
+        cquery.query.filtered.filter.bool.must_not = []
+        cquery.size = qsize
+
+        cquery.aggs["1"].date_histogram.field = "@timestamp"
+        cquery.aggs["1"].date_histogram.interval = qinterval
+        cquery.aggs["1"].date_histogram.time_zone = "Europe/Helsinki"
+        cquery.aggs["1"].date_histogram.min_doc_count = qmin_doc_count
+        cquery.aggs["1"].date_histogram.extended_bounds.min = qgte
+        cquery.aggs["1"].date_histogram.extended_bounds.max = qlte
+
+        # Cassandra Metrics
+        cquery.aggs["1"].aggs["3"].terms.field = "type_instance"
+        cquery.aggs["1"].aggs["3"].terms.size = 0
+        cquery.aggs["1"].aggs["3"].terms.order["1"] = "desc"
+        cquery.aggs["1"].aggs["3"].aggs["1"].avg.field = "value"
+
+        cqueryd = cquery.to_dict()
+        return cqueryd
+
+    def mongoDBGaugeQuery(self, qstring, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
+                            qmin_doc_count=1):
+        cquery = Dict()
+        cquery.query.filtered.query.query_string.query = qstring
+        cquery.query.filtered.query.query_string.analyze_wildcard = wildCard
+        cquery.query.filtered.filter.bool.must = [
+            {"range": {"@timestamp": {"gte": qgte, "lte": qlte, "format": qtformat}}}]
+        cquery.query.filtered.filter.bool.must_not = []
+        cquery.size = qsize
+
+        cquery.aggs["1"].date_histogram.field = "@timestamp"
+        cquery.aggs["1"].date_histogram.interval = qinterval
+        cquery.aggs["1"].date_histogram.time_zone = "Europe/Helsinki"
+        cquery.aggs["1"].date_histogram.min_doc_count = qmin_doc_count
+        cquery.aggs["1"].date_histogram.extended_bounds.min = qgte
+        cquery.aggs["1"].date_histogram.extended_bounds.max = qlte
+
+        # Cassandra Metrics
+        cquery.aggs["1"].aggs["3"].terms.field = "type_instance"
+        cquery.aggs["1"].aggs["3"].terms.size = 0
+        cquery.aggs["1"].aggs["3"].terms.order["1"] = "desc"
+        cquery.aggs["1"].aggs["3"].aggs["1"].avg.field = "value"
+
+        cqueryd = cquery.to_dict()
+        return cqueryd
 
     def sparkQuery(self):
         return "Spark metrics query"

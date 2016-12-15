@@ -427,7 +427,8 @@ class DataFormatter:
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), rKey, rValue)
                             # print "%s -> %s"% (rKey, rValue)
                             dictMetrics['key'] = rValue
-                        elif query['aggs'].values()[0].values()[1].values()[0].values()[0].values()[0] =='type_instance.raw':
+                        elif query['aggs'].values()[0].values()[1].values()[0].values()[0].values()[0] == 'type_instance.raw' \
+                                or query['aggs'].values()[0].values()[1].values()[0].values()[0].values()[0] == 'type_instance':
                             logger.debug('[%s] : [DEBUG] Detected Memory type aggregation', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
                             # print "This is  rValue ________________> %s" % str(rValue)
                             # print "Keys of rValue ________________> %s" % str(rValue.keys())
@@ -444,7 +445,8 @@ class DataFormatter:
         # print "Required Metrics -> %s" % requiredMetrics
         csvOut = os.path.join(self.dataDir, filename)
         cheaders = []
-        if query['aggs'].values()[0].values()[1].values()[0].values()[0].values()[0] == "type_instance.raw":
+        if query['aggs'].values()[0].values()[1].values()[0].values()[0].values()[0] == "type_instance.raw" or \
+                        query['aggs'].values()[0].values()[1].values()[0].values()[0].values()[0] == 'type_instance':
             logger.debug('[%s] : [DEBUG] Detected Memory type query', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
             try:
                 cheaders = requiredMetrics[0].keys()
@@ -478,6 +480,12 @@ class DataFormatter:
                     w = csv.DictWriter(csvfile, cheaders)
                     w.writeheader()
                     for metrics in requiredMetrics:
+                        if cheaders != metrics.keys():
+                            logger.error('[%s] : [ERROR] Headers different from required metrics: headers -> %s, metrics ->%s', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(cheaders), str(metrics.keys()))
+                            diff = list(set(metrics.keys()) - set(cheaders))
+                            print "Headers different from required metrics with %s " % diff
+                            print "Check qInterval setting for all metrics. Try increasing it!"
+                            sys.exit(1)
                         w.writerow(metrics)
                 csvfile.close()
             except EnvironmentError:
