@@ -40,7 +40,7 @@ class AdpEngine:
         self.allowedMethodsClustering = ['skm', 'em', 'dbscan', 'sdbscan', 'isoforest']
         self.allowefMethodsClassification = []  # TODO
         self.heap = settingsDict['heap']
-        self.dmonConnector = Connector(self.esendpoint, dmonPort=self.dmonPort)
+        self.dmonConnector = Connector(self.esendpoint, dmonPort=self.dmonPort, index=self.index)
         self.qConstructor = QueryConstructor()
         self.dformat = DataFormatter(self.dataDir)
         self.dweka = dweka(self.dataDir, self.modelsDir, wHeap=self.heap)
@@ -53,6 +53,7 @@ class AdpEngine:
         self.desiredNodesList = []
         self.sparkReturn = 0
         self.stormReturn = 0
+        self.cassandraReturn = 0
         self.yarnReturn = 0
         self.systemReturn = 0
         self.mapmetrics = 0
@@ -451,8 +452,12 @@ class AdpEngine:
             else:
                 df_storm = self.dformat.dict2csv(gstorm, qstorm, storm_file, df=checkpoint)
                 self.stormReturn = df_storm
-
-        return self.systemReturn, self.yarnReturn, self.reducemetrics, self.mapmetrics, self.mrapp, self.sparkReturn, self.stormReturn
+        elif 'cassandra' in queryd:
+            # desNodes = ['cassandra-1']  #REMOVE only for casasndra testing
+            self.cassandraReturn = self.getCassandra(desNodes)
+        elif 'mongodb' in queryd:
+            print "MongoDB Metrics" #todo
+        return self.systemReturn, self.yarnReturn, self.reducemetrics, self.mapmetrics, self.mrapp, self.sparkReturn, self.stormReturn, self.cassandraReturn
 
     def filterData(self, df, m=False):
         '''
@@ -512,14 +517,14 @@ class AdpEngine:
             print "Getting data ..."
             checkpoint = str2Bool(self.checkpoint)
             queryd = queryParser(self.query)
-            systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn = self.getData()
+            systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn, cassandraReturn = self.getData()
             if not checkpoint:
                 if 'yarn' in queryd:
                     udata = self.dformat.toDF(os.path.join(self.dataDir, 'Final_Merge.csv'))
                 elif 'storm' in queryd:
                     udata = self.dformat.toDF(os.path.join(self.dataDir, 'Storm.csv'))
                 elif 'cassandra' in queryd:
-                    return "not yet implemented"  # todo
+                    udata = self.dformat.toDF(os.path.join(self.dataDir, 'Merged_Cassandra.csv'))
                 elif 'mongodb' in queryd:
                     return "not yet implemented"  # todo
                 elif 'spark' in queryd:
@@ -530,7 +535,7 @@ class AdpEngine:
                 elif 'storm' in queryd:
                     udata = stormReturn #todo important implement storm, spark, cassandra and mongodb switching
                 elif 'cassandra' in queryd:
-                    return "not yet implemented"  # todo
+                    udata = cassandraReturn
                 elif 'mongodb' in queryd:
                     return "not yet implemented"  # todo
                 elif 'spark' in queryd:
@@ -554,6 +559,8 @@ class AdpEngine:
                                 sys.exit(1)
                         elif 'storm' in queryd:
                             dataf = os.path.join(self.dataDir, 'Storm.csv')
+                        elif 'cassandra' in queryd:
+                            dataf = os.path.join(self.dataDir, 'Merged_Cassandra.csv')
                         data = dataf
                     if self.method == 'skm':
                         print "Method %s settings detected -> %s" % (self.method, str(self.methodSettings))
@@ -716,7 +723,7 @@ class AdpEngine:
             checkpoint = str2Bool(self.checkpoint)
             if self.type == 'clustering':
                 print "Collect data ..."
-                systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn = self.getData(detect=True)
+                systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn, cassandraReturn = self.getData(detect=True)
                 # if list(set(self.dformat.fmHead) - set(list(yarnReturn.columns.values))):
                 #     print "Mismatch between desired and loaded data"
                 #     sys.exit()
@@ -1175,6 +1182,53 @@ class AdpEngine:
                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
             print "Data Node metrics merge complete"
             return dn_merged
+
+    def getCassandra(self, nodes, detect=False):
+        if detect:
+            tfrom = "now-%s" % self.interval
+            to = "now"
+        else:
+            tfrom = self.tfrom
+            to = self.to
+        print "Querying  Cassandra metrics ..."
+        logger.info('[%s] : [INFO] Querying  Cassandra metrics ...',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        checkpoint = str2Bool(self.checkpoint)
+        lcassandraCounter = []
+        lcassandraGauge = []
+        logger.info('[%s] : [INFO] Querying System metrics ...',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        for node in nodes:
+            cassandra, cassandra_file = self.qConstructor.cassandraCounterString(host=node)
+            cassandragauge, cassandragauge_file = self.qConstructor.cassandraGaugeString(host=node)
+
+            # Queries
+            qcassandra = self.qConstructor.cassandraQuery(cassandra, tfrom, to, self.qsize, self.qinterval)
+            qcassandragauge = self.qConstructor.cassandraQuery(cassandragauge, tfrom, to, self.qsize, self.qinterval)
+
+            # Execute query and convert response to csv
+            gcassandra = self.dmonConnector.aggQuery(qcassandra)
+            gcassandragauge = self.dmonConnector.aggQuery(qcassandragauge)
+
+
+            lcassandraCounter.append(self.dformat.dict2csv(gcassandra, qcassandra, cassandra_file, df=True))
+            lcassandraGauge.append(
+                self.dformat.dict2csv(gcassandragauge, qcassandragauge, cassandragauge_file, df=True))
+
+            # Merge and rename by node system Files
+
+        df_CA_Count = self.dformat.chainMergeCassandra(lcassandraCounter)
+        df_CA_Gauge = self.dformat.chainMergeCassandra(lcassandraGauge)
+
+        df_CA = self.dformat.listMerge([df_CA_Count, df_CA_Gauge])
+        print "Cassandra  metrics merge complete"
+        logger.info('[%s] : [INFO] Cassandra  metrics merge complete',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        if not checkpoint:
+            self.dformat.df2csv(df_CA, os.path.join(self.dataDir, 'Merged_Cassandra.csv'))
+            return 0
+        else:
+            return df_CA
 
     def printTest(self):
         print "Endpoint -> %s" %self.esendpoint

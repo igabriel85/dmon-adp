@@ -261,6 +261,16 @@ class DataFormatter:
         df_DN = self.chainMerge(allDN, colNamesDN, iterStart=2)
         return df_DN
 
+    def chainMergeCassandra(self, lcassandra):
+        '''
+        :return: -> merged Cassandra metrics
+        '''
+        # Read files
+        # Get column headers and gen dict with new col headers
+        colNamesCa = csvheaders2colNames(lcassandra[0], 'node1')
+        df_CA = self.chainMerge(lcassandra, colNamesCa, iterStart=2)
+        return df_CA
+
     def listMerge(self, lFiles):
         '''
         :param lFiles: -> list of files
