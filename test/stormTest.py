@@ -4,8 +4,9 @@ import os
 from dmonconnector import Connector
 
 if __name__ == '__main__':
-    dataDir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+    # dataDir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
     modelDir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
+    dataDir = '/Users/Gabriel/Documents/workspaces/diceWorkspace/dmon-adp/data'
 
     #Standard query values
     # qte = 1475842980000
@@ -25,7 +26,7 @@ if __name__ == '__main__':
     dformat = DataFormatter(dataDir)
 
     storm, storm_file = qConstructor.stormString()
-    print "Query strinb -> %s" % storm
+    print "Query string -> %s" % storm
     qstorm = qConstructor.stormQuery(storm, qgte, qlte, qsize, qinterval, bolts=bolts, spouts=spouts)
     print "Query -> %s" % qstorm
     gstorm = dmonConnector.aggQuery(qstorm)

@@ -54,6 +54,7 @@ class AdpEngine:
         self.sparkReturn = 0
         self.stormReturn = 0
         self.cassandraReturn = 0
+        self.mongoReturn = 0
         self.yarnReturn = 0
         self.systemReturn = 0
         self.mapmetrics = 0
@@ -456,8 +457,8 @@ class AdpEngine:
             # desNodes = ['cassandra-1']  #REMOVE only for casasndra testing
             self.cassandraReturn = self.getCassandra(desNodes)
         elif 'mongodb' in queryd:
-            print "MongoDB Metrics" #todo
-        return self.systemReturn, self.yarnReturn, self.reducemetrics, self.mapmetrics, self.mrapp, self.sparkReturn, self.stormReturn, self.cassandraReturn
+            self.mongoReturn = self.getMongodb(desNodes)
+        return self.systemReturn, self.yarnReturn, self.reducemetrics, self.mapmetrics, self.mrapp, self.sparkReturn, self.stormReturn, self.cassandraReturn, self.mongoReturn
 
     def filterData(self, df, m=False):
         '''
@@ -517,7 +518,7 @@ class AdpEngine:
             print "Getting data ..."
             checkpoint = str2Bool(self.checkpoint)
             queryd = queryParser(self.query)
-            systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn, cassandraReturn = self.getData()
+            systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn, cassandraReturn, mongoReturn = self.getData()
             if not checkpoint:
                 if 'yarn' in queryd:
                     udata = self.dformat.toDF(os.path.join(self.dataDir, 'Final_Merge.csv'))
@@ -526,7 +527,7 @@ class AdpEngine:
                 elif 'cassandra' in queryd:
                     udata = self.dformat.toDF(os.path.join(self.dataDir, 'Merged_Cassandra.csv'))
                 elif 'mongodb' in queryd:
-                    return "not yet implemented"  # todo
+                    udata = self.dformat.toDF(os.path.join(self.dataDir, 'Merged_Mongo.csv'))
                 elif 'spark' in queryd:
                     return "not yet implemented"  # todo
             else:
@@ -537,7 +538,7 @@ class AdpEngine:
                 elif 'cassandra' in queryd:
                     udata = cassandraReturn
                 elif 'mongodb' in queryd:
-                    return "not yet implemented"  # todo
+                    udata = mongoReturn
                 elif 'spark' in queryd:
                     return "not yet implemented"  # todo
             udata = self.filterData(udata) #todo check
@@ -561,6 +562,8 @@ class AdpEngine:
                             dataf = os.path.join(self.dataDir, 'Storm.csv')
                         elif 'cassandra' in queryd:
                             dataf = os.path.join(self.dataDir, 'Merged_Cassandra.csv')
+                        elif 'mongodb' in queryd:
+                            dataf = os.path.join(self.dataDir, 'Merged_Mongo.csv')
                         data = dataf
                     if self.method == 'skm':
                         print "Method %s settings detected -> %s" % (self.method, str(self.methodSettings))
@@ -723,7 +726,7 @@ class AdpEngine:
             checkpoint = str2Bool(self.checkpoint)
             if self.type == 'clustering':
                 print "Collect data ..."
-                systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn, cassandraReturn = self.getData(detect=True)
+                systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn, cassandraReturn, mongoReturn = self.getData(detect=True)
                 # if list(set(self.dformat.fmHead) - set(list(yarnReturn.columns.values))):
                 #     print "Mismatch between desired and loaded data"
                 #     sys.exit()
@@ -1196,8 +1199,6 @@ class AdpEngine:
         checkpoint = str2Bool(self.checkpoint)
         lcassandraCounter = []
         lcassandraGauge = []
-        logger.info('[%s] : [INFO] Querying System metrics ...',
-                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
         for node in nodes:
             cassandra, cassandra_file = self.qConstructor.cassandraCounterString(host=node)
             cassandragauge, cassandragauge_file = self.qConstructor.cassandraGaugeString(host=node)
@@ -1229,6 +1230,51 @@ class AdpEngine:
             return 0
         else:
             return df_CA
+
+    def getMongodb(self, nodes, detect=False):
+        if detect:
+            tfrom = "now-%s" % self.interval
+            to = "now"
+        else:
+            tfrom = self.tfrom
+            to = self.to
+        print "Querying Mongodb metrics ..."
+        logger.info('[%s] : [INFO] Querying  MongoDB metrics ...',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        checkpoint = str2Bool(self.checkpoint)
+        lmongoCounter = []
+        lmongoGauge = []
+        for node in nodes:
+            mongodbCounter, mongodbCounter_file = self.qConstructor.mongodbCounterString(host=node)
+            mongodbGauge, mongodbGauge_file = self.qConstructor.mongodbGaugeString(host=node)
+
+            #Queries
+            qmongodbCounter = self.qConstructor.mongoDBCounterQuery(mongodbCounter, tfrom, to, self.qsize, self.qinterval)
+            qmongodbGauge = self.qConstructor.mongoDBGaugeQuery(mongodbGauge, tfrom, to, self.qsize, self.qinterval)
+
+            # Execute query and convert response to csv
+            gmongodbGauge = self.dmonConnector.aggQuery(qmongodbGauge)
+            gmongodbCounter = self.dmonConnector.aggQuery(qmongodbCounter)
+
+            lmongoCounter.append(self.dformat.dict2csv(gmongodbCounter, qmongodbCounter, mongodbCounter_file))
+            lmongoGauge.append(self.dformat.dict2csv(gmongodbGauge, qmongodbGauge, mongodbGauge_file))
+
+
+    #Merge and rename by node system File
+        df_MD_Count = self.dformat.chainMergeMongoDB(lmongoCounter)
+        df_MD_Gauge = self.dformat.chainMergeMongoDB(lmongoGauge)
+
+        df_MD = self.dformat.listMerge([df_MD_Count, df_MD_Gauge])
+        print "MongoDB metrics merged"
+        logger.info('[%s] : [INFO] MongoDB  metrics merge complete',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+
+        if not checkpoint:
+            self.dformat.df2csv(df_MD, os.path.join(self.dataDir, "Merged_Mongo.csv"))
+            return 0
+        else:
+            return df_MD
+
 
     def printTest(self):
         print "Endpoint -> %s" %self.esendpoint

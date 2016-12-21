@@ -263,6 +263,7 @@ class DataFormatter:
 
     def chainMergeCassandra(self, lcassandra):
         '''
+        :param lcassandra: -> list of cassandra dataframes
         :return: -> merged Cassandra metrics
         '''
         # Read files
@@ -270,6 +271,17 @@ class DataFormatter:
         colNamesCa = csvheaders2colNames(lcassandra[0], 'node1')
         df_CA = self.chainMerge(lcassandra, colNamesCa, iterStart=2)
         return df_CA
+
+    def chainMergeMongoDB(self, lmongo):
+        '''
+        :param lmongo: -> list of mongodb dataframes
+        :return: -> merged mongodb metrics
+        '''
+        # Read files
+        # Get column headers and gen dict with new col headers
+        colNamesMD = csvheaders2colNames(lmongo[0], 'node1')
+        df_MD = self.chainMerge(lmongo, colNamesMD, iterStart=2)
+        return df_MD
 
     def listMerge(self, lFiles):
         '''
