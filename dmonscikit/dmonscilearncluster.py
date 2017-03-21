@@ -6,6 +6,7 @@ from sklearn.datasets.samples_generator import make_blobs
 from sklearn.preprocessing import StandardScaler
 import cPickle as pickle
 import os
+from util import str2Bool
 import pandas as pd
 from adplogger import logger
 from datetime import datetime
@@ -28,11 +29,15 @@ class SciCluster:
         :example settings: -> {eps:0.9, min_samples:10, metric:'euclidean' ,
         algorithm:'auto, leaf_size:30, p:0.2, n_jobs:1}
         '''
+        for k, v in settings.iteritems():
+            logger.info('[%s] : [INFO] SDBSCAN %s set to %s',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), k, v)
+            print "SDBSCAN %s set to %s" % (k, v)
         sdata = StandardScaler().fit_transform(data)
         try:
-            db = DBSCAN(eps=settings['eps'], min_samples=settings['min_samples'], metric=settings['metric'],
-                        algorithm=settings['algorithm'], leaf_size=settings['leaf_size'], p=settings['p'],
-                        n_jobs=settings['n_jobs']).fit(sdata)
+            db = DBSCAN(eps=float(settings['eps']), min_samples=int(settings['min_samples']), metric=settings['metric'],
+                        algorithm=settings['algorithm'], leaf_size=int(settings['leaf_size']), p=float(settings['p']),
+                        n_jobs=int(settings['n_jobs'])).fit(sdata)
         except Exception as inst:
             logger.error('[%s] : [ERROR] Cannot instanciate sDBSCAN with %s and %s',
                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
@@ -54,21 +59,40 @@ class SciCluster:
                         max_features:1.0, n_jobs:1, random_state:None, verbose:0}
         '''
         # rng = np.random.RandomState(42)
+        if settings['random_state'] == 'None':
+            settings['random_state'] = None
+
+        if isinstance(settings['bootstrap'], str):
+            settings['bootstrap'] = str2Bool(settings['bootstrap'])
+
+        if isinstance(settings['verbose'], str):
+            settings['verbose'] = str2Bool(settings['verbose'])
+
+        if settings['max_samples'] != 'auto':
+            settings['max_samples'] = int(settings['max_samples'])
+        print type(settings['max_samples'])
         for k, v in settings.iteritems():
-            print "%s->%s" % (k, v)
+            logger.info('[%s] : [INFO] IsolationForest %s set to %s',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), k, v)
+            print "IsolationForest %s set to %s" % (k, v)
         try:
-            clf = IsolationForest(n_estimators=settings['n_estimators'], max_samples=settings['max_samples'], contamination=settings['contamination'], bootstrap=settings['bootstrap'],
-                        max_features=settings['max_features'], n_jobs=settings['n_jobs'], random_state=settings['random_state'], verbose=settings['verbose'])
+            clf = IsolationForest(n_estimators=int(settings['n_estimators']), max_samples=settings['max_samples'], contamination=float(settings['contamination']), bootstrap=settings['bootstrap'],
+                        max_features=float(settings['max_features']), n_jobs=int(settings['n_jobs']), random_state=settings['random_state'], verbose=settings['verbose'])
         except Exception as inst:
             logger.error('[%s] : [ERROR] Cannot instanciate isolation forest with %s and %s',
                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
             print "Error while  instanciating isolation forest with %s and %s" % (type(inst), inst.args)
             sys.exit(1)
         # clf = IsolationForest(max_samples=100, random_state=rng)
-        print "*&*&*&& %s" % type(data)
-        clf.fit(data)
-        print clf.contamination
+        # print "*&*&*&& %s" % type(data)
+        try:
+            clf.fit(data)
+        except Exception as inst:
+            logger.error('[%s] : [ERROR] Cannot fit isolation forest model with %s and %s',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+            sys.exit(1)
         predict = clf.predict(data)
+        print "Anomaly Array:"
         print predict
         self.__serializemodel(clf, 'isoforest', mname)
         return clf
@@ -133,7 +157,7 @@ class SciCluster:
         fpath = "%s_%s.pkl" % (method, mname)
         fname = os.path.join(self.modelDir, fpath)
         pickle.dump(model, open(fname, "wb"))
-        print 'Saved sdbscan model at %s' % fpath
+        print 'Saved %s model at %s' %(method, fpath)
 
     def __loadClusterModel(self, method, model):
         '''

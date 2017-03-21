@@ -261,6 +261,28 @@ class DataFormatter:
         df_DN = self.chainMerge(allDN, colNamesDN, iterStart=2)
         return df_DN
 
+    def chainMergeCassandra(self, lcassandra):
+        '''
+        :param lcassandra: -> list of cassandra dataframes
+        :return: -> merged Cassandra metrics
+        '''
+        # Read files
+        # Get column headers and gen dict with new col headers
+        colNamesCa = csvheaders2colNames(lcassandra[0], 'node1')
+        df_CA = self.chainMerge(lcassandra, colNamesCa, iterStart=2)
+        return df_CA
+
+    def chainMergeMongoDB(self, lmongo):
+        '''
+        :param lmongo: -> list of mongodb dataframes
+        :return: -> merged mongodb metrics
+        '''
+        # Read files
+        # Get column headers and gen dict with new col headers
+        colNamesMD = csvheaders2colNames(lmongo[0], 'node1')
+        df_MD = self.chainMerge(lmongo, colNamesMD, iterStart=2)
+        return df_MD
+
     def listMerge(self, lFiles):
         '''
         :param lFiles: -> list of files
@@ -427,7 +449,8 @@ class DataFormatter:
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), rKey, rValue)
                             # print "%s -> %s"% (rKey, rValue)
                             dictMetrics['key'] = rValue
-                        elif query['aggs'].values()[0].values()[1].values()[0].values()[0].values()[0] =='type_instance.raw':
+                        elif query['aggs'].values()[0].values()[1].values()[0].values()[0].values()[0] == 'type_instance.raw' \
+                                or query['aggs'].values()[0].values()[1].values()[0].values()[0].values()[0] == 'type_instance':
                             logger.debug('[%s] : [DEBUG] Detected Memory type aggregation', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
                             # print "This is  rValue ________________> %s" % str(rValue)
                             # print "Keys of rValue ________________> %s" % str(rValue.keys())
@@ -444,9 +467,15 @@ class DataFormatter:
         # print "Required Metrics -> %s" % requiredMetrics
         csvOut = os.path.join(self.dataDir, filename)
         cheaders = []
-        if query['aggs'].values()[0].values()[1].values()[0].values()[0].values()[0] == "type_instance.raw":
+        if query['aggs'].values()[0].values()[1].values()[0].values()[0].values()[0] == "type_instance.raw" or \
+                        query['aggs'].values()[0].values()[1].values()[0].values()[0].values()[0] == 'type_instance':
             logger.debug('[%s] : [DEBUG] Detected Memory type query', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
-            cheaders = requiredMetrics[0].keys()
+            try:
+                cheaders = requiredMetrics[0].keys()
+            except IndexError:
+                logger.error('[%s] : [ERROR] Empty response detected from DMon, stoping detection, check DMon.', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+                print "Empty response detected from DMon, stoping detection, check DMon"
+                sys.exit(1)
         else:
             kvImp = {}
 
@@ -473,6 +502,12 @@ class DataFormatter:
                     w = csv.DictWriter(csvfile, cheaders)
                     w.writeheader()
                     for metrics in requiredMetrics:
+                        if set(cheaders) != set(metrics.keys()):
+                            logger.error('[%s] : [ERROR] Headers different from required metrics: headers -> %s, metrics ->%s', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(cheaders), str(metrics.keys()))
+                            diff = list(set(metrics.keys()) - set(cheaders))
+                            print "Headers different from required metrics with %s " % diff
+                            print "Check qInterval setting for all metrics. Try increasing it!"
+                            sys.exit(1)
                         w.writerow(metrics)
                 csvfile.close()
             except EnvironmentError:
@@ -505,8 +540,9 @@ class DataFormatter:
             jvm.start()
             convertCsvtoArff(dataIn, dataOut)
         except Exception as inst:
-            logger.error('[%s] : [ERROR] Exception occured while converting to arff with %s and %s', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+            pass
         finally:
+            logger.error('[%s] : [ERROR] Exception occured while converting to arff with %s and %s', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
             jvm.stop()
         logger.info('[%s] : [INFO] Finished conversion of %s to %s', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), dataIn, dataOut)
 
@@ -533,6 +569,19 @@ class DataFormatter:
             df = pd.read_csv(f)
             dfList.append(df)
         return dfList
+
+    def toDF(self, fileName):
+        '''
+        :param fileName: absolute path to file
+        :return: dataframe
+        '''
+        if not os.path.isfile(fileName):
+            print "File %s does not exist, cannot load data! Exiting ..." % str(fileName)
+            logger.error('[%s] : [ERROR] File %s does not exist',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(fileName))
+            sys.exit(1)
+        df = pd.read_csv(fileName)
+        return df
 
     def df2BytesIO(self, df):
         out = io.BytesIO()

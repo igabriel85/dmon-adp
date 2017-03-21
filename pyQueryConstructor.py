@@ -102,7 +102,7 @@ class QueryConstructor():
 
     def jvmMapProcessingString(self, host):
         qstring = "type:\"maptask-metrics\" AND serviceType:\"jvm\" AND hostname:\"%s\"" % host
-        return qstring
+        return qstring #TODO
 
     def jvmRedProcessbyNameString(self, host, process):
         qstring = "type:\"reducetask-metrics\" AND serviceType:\"jvm\" AND hostname:\"%s\" AND ProcessName:\"%s\"" %(host, process)
@@ -113,6 +113,31 @@ class QueryConstructor():
         qstring = "type:\"maptask-metrics\" AND serviceType:\"jvm\" AND hostname:\"%s\" AND ProcessName:\"%s\"" % (
         host, process)
         file = 'JVM_MapTasksTask_%s_%s.csv' % (host, process)
+        return qstring, file
+
+    def stormString(self):
+        qstring = "type:\"storm-topology\""
+        file = 'Storm.csv'
+        return qstring, file
+
+    def cassandraCounterString(self, host):
+        qstring = "plugin:\"GenericJMX\" AND collectd_type:\"counter\" host:\"%s\"" % host
+        file = "Cassandra_counter_%s.csv" % host
+        return qstring, file
+
+    def cassandraGaugeString(self, host):
+        qstring = "plugin:\"GenericJMX\" AND collectd_type:\"gauge\" host:\"%s\"" % host
+        file = "Cassandra_gauge_%s.csv" % host
+        return qstring, file
+
+    def mongodbCounterString(self, host):
+        qstring = "plugin:mongo AND collectd_type:counter AND host:\"%s\"" % host
+        file = "MongoDB_Counter_%s.csv" % host
+        return qstring, file
+
+    def mongodbGaugeString(self, host):
+        qstring = "plugin:mongo AND collectd_type:gauge AND host:\"%s\"" % host
+        file = "MongoDB_Gauge_%s.csv" % host
         return qstring, file
 
     def loadAverage(self):  # TODO
@@ -698,11 +723,156 @@ class QueryConstructor():
         cqueryd = cquery.to_dict()
         return cqueryd
 
-    def yarnQuery(self):
-        return "Yarn metrics query"
+    def stormQuery(self, qstring, qgte, qlte, qsize, qinterval, bolts, spouts, wildCard=True, qtformat="epoch_millis",
+                            qmin_doc_count=1):
+        cquery = Dict()
+        cquery.query.filtered.query.query_string.query = qstring
+        cquery.query.filtered.query.query_string.analyze_wildcard = wildCard
+        cquery.query.filtered.filter.bool.must = [
+            {"range": {"@timestamp": {"gte": qgte, "lte": qlte, "format": qtformat}}}]
+        cquery.query.filtered.filter.bool.must_not = []
+        cquery.size = qsize
 
-    def stormQuery(self):
-        return "Storm metrics query"
+        cquery.aggs["1"].date_histogram.field = "@timestamp"
+        cquery.aggs["1"].date_histogram.interval = qinterval
+        cquery.aggs["1"].date_histogram.time_zone = "Europe/Helsinki"
+        cquery.aggs["1"].date_histogram.min_doc_count = qmin_doc_count
+        cquery.aggs["1"].date_histogram.extended_bounds.min = qgte
+        cquery.aggs["1"].date_histogram.extended_bounds.max = qlte
+
+        #Storm metrics
+        cquery.aggs["1"].aggs["2"].avg.field = "executorsTotal"
+        cquery.aggs["1"].aggs["3"].avg.field = "msgTimeout"
+        cquery.aggs["1"].aggs["4"].avg.field = "tasksTotal"
+        cquery.aggs["1"].aggs["5"].avg.field = "workersTotal"
+        cquery.aggs["1"].aggs["6"].avg.field = "topologyStats_10m_acked"
+        cquery.aggs["1"].aggs["7"].avg.field = "topologyStats_10m_completeLatency"
+        cquery.aggs["1"].aggs["8"].avg.field = "topologyStats_10m_emitted"
+        cquery.aggs["1"].aggs["9"].avg.field = "topologyStats_10m_failed"
+        cquery.aggs["1"].aggs["10"].avg.field = "topologyStats_10m_transferred"
+        cquery.aggs["1"].aggs["11"].avg.field = "topologyStats_10m_window"
+        cquery.aggs["1"].aggs["12"].avg.field = "topologyStats_1d_acked"
+        cquery.aggs["1"].aggs["13"].avg.field = "topologyStats_1d_completeLatency"
+        cquery.aggs["1"].aggs["14"].avg.field = "topologyStats_1d_emitted"
+        cquery.aggs["1"].aggs["15"].avg.field = "topologyStats_1d_failed"
+        cquery.aggs["1"].aggs["16"].avg.field = "topologyStats_1d_transferred"
+        cquery.aggs["1"].aggs["17"].avg.field = "topologyStats_1d_window"
+        cquery.aggs["1"].aggs["18"].avg.field = "topologyStats_3h_acked"
+        cquery.aggs["1"].aggs["19"].avg.field = "topologyStats_3h_completeLatency"
+        cquery.aggs["1"].aggs["20"].avg.field = "topologyStats_3h_emitted"
+        cquery.aggs["1"].aggs["21"].avg.field = "topologyStats_3h_failed"
+        cquery.aggs["1"].aggs["22"].avg.field = "topologyStats_3h_transferred"
+        cquery.aggs["1"].aggs["23"].avg.field = "topologyStats_3h_window"
+        cquery.aggs["1"].aggs["24"].avg.field = "topologyStats_all_acked"
+        cquery.aggs["1"].aggs["25"].avg.field = "topologyStats_all_completeLatency"
+        cquery.aggs["1"].aggs["26"].avg.field = "topologyStats_all_emitted"
+        cquery.aggs["1"].aggs["27"].avg.field = "topologyStats_all_failed"
+        cquery.aggs["1"].aggs["28"].avg.field = "topologyStats_all_transferred"
+
+        gcounter = 29
+        for n in xrange(0, bolts):
+            cquery.aggs["1"].aggs[str(gcounter+1)].avg.field = "bolts_%s_acked" % str(n)
+            cquery.aggs["1"].aggs[str(gcounter+2)].avg.field = "bolts_%s_capacity" % str(n)
+            cquery.aggs["1"].aggs[str(gcounter+3)].avg.field = "bolts_%s_emitted" % str(n)
+            cquery.aggs["1"].aggs[str(gcounter+4)].avg.field = "bolts_%s_executed" % str(n)
+            cquery.aggs["1"].aggs[str(gcounter+5)].avg.field = "bolts_%s_executors" % str(n)
+            cquery.aggs["1"].aggs[str(gcounter+6)].avg.field = "bolts_%s_failed" % str(n)
+            cquery.aggs["1"].aggs[str(gcounter+7)].avg.field = "bolts_%s_tasks" % str(n)
+            cquery.aggs["1"].aggs[str(gcounter+8)].avg.field = "bolts_%s_transferred" % str(n)
+            cquery.aggs["1"].aggs[str(gcounter+9)].avg.field = "bolts_%s_executeLatency" % str(n)
+            cquery.aggs["1"].aggs[str(gcounter+10)].avg.field = "bolts_%s_processLatency" % str(n)
+            gcounter += 10
+
+        for t in xrange(0, spouts):
+            cquery.aggs["1"].aggs[str(gcounter+1)].avg.field = "spouts_%s_acked" % str(t)
+            cquery.aggs["1"].aggs[str(gcounter+2)].avg.field = "spouts_%s_emitted" % str(t)
+            cquery.aggs["1"].aggs[str(gcounter+3)].avg.field = "spouts_%s_executors" % str(t)
+            cquery.aggs["1"].aggs[str(gcounter+4)].avg.field = "spouts_%s_failed" % str(t)
+            cquery.aggs["1"].aggs[str(gcounter+5)].avg.field = "spouts_%s_tasks" % str(t)
+            cquery.aggs["1"].aggs[str(gcounter+6)].avg.field = "spouts_%s_transferred" % str(t)
+            cquery.aggs["1"].aggs[str(gcounter+7)].avg.field = "spouts_%s_completeLatency" % str(t)
+            gcounter += 7
+
+        cqueryd = cquery.to_dict()
+        return cqueryd
+
+    def cassandraQuery(self, qstring, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
+                            qmin_doc_count=1):
+        cquery = Dict()
+        cquery.query.filtered.query.query_string.query = qstring
+        cquery.query.filtered.query.query_string.analyze_wildcard = wildCard
+        cquery.query.filtered.filter.bool.must = [
+            {"range": {"@timestamp": {"gte": qgte, "lte": qlte, "format": qtformat}}}]
+        cquery.query.filtered.filter.bool.must_not = []
+        cquery.size = qsize
+
+        cquery.aggs["1"].date_histogram.field = "@timestamp"
+        cquery.aggs["1"].date_histogram.interval = qinterval
+        cquery.aggs["1"].date_histogram.time_zone = "Europe/Helsinki"
+        cquery.aggs["1"].date_histogram.min_doc_count = qmin_doc_count
+        cquery.aggs["1"].date_histogram.extended_bounds.min = qgte
+        cquery.aggs["1"].date_histogram.extended_bounds.max = qlte
+
+        #Cassandra Metrics
+        cquery.aggs["1"].aggs["3"].terms.field = "type_instance"
+        cquery.aggs["1"].aggs["3"].terms.size = 0
+        cquery.aggs["1"].aggs["3"].terms.order["1"] = "desc"
+        cquery.aggs["1"].aggs["3"].aggs["1"].avg.field = "value"
+
+        cqueryd = cquery.to_dict()
+        return cqueryd
+
+    def mongoDBCounterQuery(self, qstring, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
+                            qmin_doc_count=1):
+        cquery = Dict()
+        cquery.query.filtered.query.query_string.query = qstring
+        cquery.query.filtered.query.query_string.analyze_wildcard = wildCard
+        cquery.query.filtered.filter.bool.must = [
+            {"range": {"@timestamp": {"gte": qgte, "lte": qlte, "format": qtformat}}}]
+        cquery.query.filtered.filter.bool.must_not = []
+        cquery.size = qsize
+
+        cquery.aggs["1"].date_histogram.field = "@timestamp"
+        cquery.aggs["1"].date_histogram.interval = qinterval
+        cquery.aggs["1"].date_histogram.time_zone = "Europe/Helsinki"
+        cquery.aggs["1"].date_histogram.min_doc_count = qmin_doc_count
+        cquery.aggs["1"].date_histogram.extended_bounds.min = qgte
+        cquery.aggs["1"].date_histogram.extended_bounds.max = qlte
+
+        # Cassandra Metrics
+        cquery.aggs["1"].aggs["3"].terms.field = "type_instance"
+        cquery.aggs["1"].aggs["3"].terms.size = 0
+        cquery.aggs["1"].aggs["3"].terms.order["1"] = "desc"
+        cquery.aggs["1"].aggs["3"].aggs["1"].avg.field = "value"
+
+        cqueryd = cquery.to_dict()
+        return cqueryd
+
+    def mongoDBGaugeQuery(self, qstring, qgte, qlte, qsize, qinterval, wildCard=True, qtformat="epoch_millis",
+                            qmin_doc_count=1):
+        cquery = Dict()
+        cquery.query.filtered.query.query_string.query = qstring
+        cquery.query.filtered.query.query_string.analyze_wildcard = wildCard
+        cquery.query.filtered.filter.bool.must = [
+            {"range": {"@timestamp": {"gte": qgte, "lte": qlte, "format": qtformat}}}]
+        cquery.query.filtered.filter.bool.must_not = []
+        cquery.size = qsize
+
+        cquery.aggs["1"].date_histogram.field = "@timestamp"
+        cquery.aggs["1"].date_histogram.interval = qinterval
+        cquery.aggs["1"].date_histogram.time_zone = "Europe/Helsinki"
+        cquery.aggs["1"].date_histogram.min_doc_count = qmin_doc_count
+        cquery.aggs["1"].date_histogram.extended_bounds.min = qgte
+        cquery.aggs["1"].date_histogram.extended_bounds.max = qlte
+
+        # Cassandra Metrics
+        cquery.aggs["1"].aggs["3"].terms.field = "type_instance"
+        cquery.aggs["1"].aggs["3"].terms.size = 0
+        cquery.aggs["1"].aggs["3"].terms.order["1"] = "desc"
+        cquery.aggs["1"].aggs["3"].aggs["1"].avg.field = "value"
+
+        cqueryd = cquery.to_dict()
+        return cqueryd
 
     def sparkQuery(self):
         return "Spark metrics query"

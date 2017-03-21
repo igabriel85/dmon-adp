@@ -2344,8 +2344,7 @@ processQ = {
 
 qstring15 = "type:\"reducetask-metrics\" AND serviceType:\"jvm\""
 
-test15 = qConstructor.queryByProcess(qstring15, qgte, qlte, qsize, qinterval, wildCard, qtformat,
-                                          0)
+test15 = qConstructor.queryByProcess(qstring15, qgte, qlte, qsize, qinterval, wildCard, qtformat, 0)
 
 print "Gen->%s" % test15
 print "Org->%s" % processQ
@@ -2355,3 +2354,344 @@ else:
     print "Passed Test 15"
 
 
+stormQ = {
+  "query": {
+    "filtered": {
+      "query": {
+        "query_string": {
+          "query": "type:storm-cluster",
+          "analyze_wildcard": True
+        }
+      },
+      "filter": {
+        "bool": {
+          "must": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": 1475842980000,
+                  "lte": 1475845200000,
+                  "format": "epoch_millis"
+                }
+              }
+            }
+          ],
+          "must_not": []
+        }
+      }
+    }
+  },
+  "size": 0,
+  "aggs": {
+    "5": {
+      "date_histogram": {
+        "field": "@timestamp",
+        "interval": "1s",
+        "time_zone": "Europe/Helsinki",
+        "min_doc_count": 1,
+        "extended_bounds": {
+          "min": 1475842980000,
+          "max": 1475845200000
+        }
+      },
+      "aggs": {
+        "1": {
+          "avg": {
+            "field": "bolts_0_acked"
+          }
+        },
+        "2": {
+          "avg": {
+            "field": "bolts_0_capacity"
+          }
+        },
+        "3": {
+          "avg": {
+            "field": "bolts_0_emitted"
+          }
+        },
+        "4": {
+          "avg": {
+            "field": "bolts_0_executed"
+          }
+        },
+        "6": {
+          "avg": {
+            "field": "bolts_0_executors"
+          }
+        },
+        "7": {
+          "avg": {
+            "field": "bolts_0_failed"
+          }
+        },
+        "8": {
+          "avg": {
+            "field": "bolts_0_tasks"
+          }
+        },
+        "9": {
+          "avg": {
+            "field": "bolts_0_transferred"
+          }
+        },
+        "10": {
+          "avg": {
+            "field": "bolts_1_acked"
+          }
+        },
+        "11": {
+          "avg": {
+            "field": "bolts_1_emitted"
+          }
+        },
+        "12": {
+          "avg": {
+            "field": "bolts_1_executed"
+          }
+        },
+        "13": {
+          "avg": {
+            "field": "bolts_1_executors"
+          }
+        },
+        "14": {
+          "avg": {
+            "field": "bolts_1_failed"
+          }
+        },
+        "15": {
+          "avg": {
+            "field": "bolts_1_tasks"
+          }
+        },
+        "16": {
+          "avg": {
+            "field": "bolts_1_transferred"
+          }
+        },
+        "17": {
+          "avg": {
+            "field": "executorsTotal"
+          }
+        },
+        "18": {
+          "avg": {
+            "field": "slotsFree"
+          }
+        },
+        "19": {
+          "avg": {
+            "field": "slotsTotal"
+          }
+        },
+        "20": {
+          "avg": {
+            "field": "msgTimeout"
+          }
+        },
+        "21": {
+          "avg": {
+            "field": "slotsUsed"
+          }
+        },
+        "22": {
+          "avg": {
+            "field": "spouts_0_acked"
+          }
+        },
+        "23": {
+          "avg": {
+            "field": "spouts_0_emitted"
+          }
+        },
+        "24": {
+          "avg": {
+            "field": "spouts_0_executors"
+          }
+        },
+        "25": {
+          "avg": {
+            "field": "spouts_0_failed"
+          }
+        },
+        "26": {
+          "avg": {
+            "field": "spouts_0_tasks"
+          }
+        },
+        "27": {
+          "avg": {
+            "field": "spouts_0_transferred"
+          }
+        },
+        "28": {
+          "avg": {
+            "field": "supervisors"
+          }
+        },
+        "29": {
+          "avg": {
+            "field": "tasksTotal"
+          }
+        },
+        "30": {
+          "avg": {
+            "field": "topology_0_executorsTotal"
+          }
+        },
+        "31": {
+          "avg": {
+            "field": "topology_0_tasksTotal"
+          }
+        },
+        "32": {
+          "avg": {
+            "field": "topology_0_workersTotal"
+          }
+        },
+        "33": {
+          "avg": {
+            "field": "topologyStats_10m_acked"
+          }
+        },
+        "34": {
+          "avg": {
+            "field": "topologyStats_10m_emitted"
+          }
+        },
+        "35": {
+          "avg": {
+            "field": "topologyStats_10m_failed"
+          }
+        },
+        "36": {
+          "avg": {
+            "field": "topologyStats_10m_transferred"
+          }
+        },
+        "37": {
+          "avg": {
+            "field": "topologyStats_1d_acked"
+          }
+        },
+        "38": {
+          "avg": {
+            "field": "topologyStats_1d_emitted"
+          }
+        },
+        "39": {
+          "avg": {
+            "field": "topologyStats_1d_failed"
+          }
+        },
+        "40": {
+          "avg": {
+            "field": "topologyStats_1d_transferred"
+          }
+        },
+        "41": {
+          "avg": {
+            "field": "topologyStats_3h_acked"
+          }
+        },
+        "42": {
+          "avg": {
+            "field": "topologyStats_3h_emitted"
+          }
+        },
+        "43": {
+          "avg": {
+            "field": "topologyStats_3h_failed"
+          }
+        },
+        "44": {
+          "avg": {
+            "field": "topologyStats_3h_transferred"
+          }
+        },
+        "45": {
+          "avg": {
+            "field": "topologyStats_all_acked"
+          }
+        },
+        "46": {
+          "avg": {
+            "field": "topologyStats_all_emitted"
+          }
+        },
+        "47": {
+          "avg": {
+            "field": "topologyStats_all_failed"
+          }
+        },
+        "48": {
+          "avg": {
+            "field": "topologyStats_all_transferred"
+          }
+        },
+        "49": {
+          "avg": {
+            "field": "workersTotal"
+          }
+        },
+        "50": {
+          "avg": {
+            "field": "bolts_0_executeLatency"
+          }
+        },
+        "51": {
+          "avg": {
+            "field": "bolts_0_processLatency"
+          }
+        },
+        "52": {
+          "avg": {
+            "field": "spouts_0_completeLatency"
+          }
+        },
+        "53": {
+          "avg": {
+            "field": "topologyStats_10m_window"
+          }
+        },
+        "54": {
+          "avg": {
+            "field": "topologyStats_10m_completeLatency"
+          }
+        },
+        "55": {
+          "avg": {
+            "field": "topologyStats_3h_window"
+          }
+        },
+        "56": {
+          "avg": {
+            "field": "topologyStats_3h_completeLatency"
+          }
+        },
+        "57": {
+          "avg": {
+            "field": "topologyStats_1d_window"
+          }
+        },
+        "58": {
+          "avg": {
+            "field": "topologyStats_1d_completeLatency"
+          }
+        },
+        "59": {
+          "avg": {
+            "field": "topologyStats_all_completeLatency"
+          }
+        }
+      }
+    }
+  }
+}
+
+qstring16 = "type:\"storm-topology\""
+bolts = 2
+spouts = 1
+test16 = qConstructor.stormQuery(qstring15, qgte, qlte, qsize, qinterval, bolts, spouts, wildCard, qtformat, 0)
+print test16

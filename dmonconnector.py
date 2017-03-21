@@ -163,6 +163,20 @@ class Connector:
         res = self.esInstance.nodes.stats(request_timeout=15)
         return res
 
+    def getStormTopology(self):
+        nUrl = "http://%s:%s/dmon/v1/overlord/detect/storm" % (self.esEndpoint, self.dmonPort)
+        logger.info('[%s] : [INFO] dmon get storm topology url -> %s',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), nUrl)
+        try:
+            rStormTopology = requests.get(nUrl)
+        except Exception as inst:
+            logger.error('[%s] : [ERROR] Exception has occured while connecting to dmon with type %s at arguments %s',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+            print "Can't connect to dmon at %s port %s" % (self.esEndpoint, self.dmonPort)
+            sys.exit(2)
+        rData = rStormTopology.json()
+        return rData
+
     def pushAnomaly(self, anomalyIndex, doc_type, body):
         try:
             res = self.esInstance.index(index=anomalyIndex, doc_type=doc_type, body=body)

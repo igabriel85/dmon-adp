@@ -68,6 +68,16 @@ def queryParser(query):
                 type['system'] = r.split(':')[1].split(', ')
             except:
                 type['system'] = 0
+        if r.split(':')[0] == 'cassandra':
+            try:
+                type['cassandra'] = r.split(':')[1].split(', ')
+            except:
+                type['cassandra'] = 0
+        if r.split(':')[0] == 'mongodb':
+            try:
+                type['mongodb'] = r.split(':')[1].split(', ')
+            except:
+                type['mongodb'] = 0
     return type
 
 
