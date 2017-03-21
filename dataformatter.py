@@ -502,7 +502,7 @@ class DataFormatter:
                     w = csv.DictWriter(csvfile, cheaders)
                     w.writeheader()
                     for metrics in requiredMetrics:
-                        if cheaders != metrics.keys():
+                        if set(cheaders) != set(metrics.keys()):
                             logger.error('[%s] : [ERROR] Headers different from required metrics: headers -> %s, metrics ->%s', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(cheaders), str(metrics.keys()))
                             diff = list(set(metrics.keys()) - set(cheaders))
                             print "Headers different from required metrics with %s " % diff
