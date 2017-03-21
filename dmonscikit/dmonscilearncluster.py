@@ -85,7 +85,12 @@ class SciCluster:
             sys.exit(1)
         # clf = IsolationForest(max_samples=100, random_state=rng)
         # print "*&*&*&& %s" % type(data)
-        clf.fit(data)
+        try:
+            clf.fit(data)
+        except Exception as inst:
+            logger.error('[%s] : [ERROR] Cannot fit isolation forest model with %s and %s',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+            sys.exit(1)
         predict = clf.predict(data)
         print "Anomaly Array:"
         print predict
