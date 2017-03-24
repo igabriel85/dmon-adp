@@ -554,6 +554,7 @@ def main(argv):
     # engine.trainMethod()
     # engine.detectAnomalies(30)
     # engine.printTest()
+    print "Exiting DICE Anomaly detection framework"
     print "\n"
     print "#" * 100
 

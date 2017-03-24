@@ -795,6 +795,10 @@ class AdpEngine:
             threadPoint.start()
             threadTrain.start()
             threadDetect.start()
+
+            threadPoint.join()
+            threadTrain.join()
+            threadDetect.join()
         except Exception as inst:
             logger.error('[%s] : [ERROR] Exception %s with %s during point thread execution, halting',
                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
