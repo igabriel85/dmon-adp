@@ -115,7 +115,7 @@ class SciCluster:
                 print "Max_Features -> %s" % smodel.max_features
                 print "Max_Samples -> %s" % smodel.max_samples_
                 print "Threashold -> %s " % smodel.threshold_
-                predict = smodel.predict(data)
+                dpredict = smodel.predict(data)
 
             elif isinstance(smodel, DBSCAN):
                 print "Detected DBSCAN model"
@@ -124,9 +124,9 @@ class SciCluster:
                 print "EPS -> %s" % smodel.eps
                 print "Min_Samples -> %s" % smodel.min_samples
                 print "N_jobs -> %s" % smodel.n_jobs
-                predict = smodel.fit_predict(data)
+                dpredict = smodel.fit_predict(data)
 
-            anomalyarray = np.argwhere(predict == -1)
+            anomalyarray = np.argwhere(dpredict == -1)
             for an in anomalyarray:
                 anomalies = {}
                 anomalies['utc'] = int(data.iloc[an[0]]['key'])
