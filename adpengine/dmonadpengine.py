@@ -724,55 +724,72 @@ class AdpEngine:
     def detectAnomalies(self):
         if str2Bool(self.detect):
             checkpoint = str2Bool(self.checkpoint)
+            queryd = queryParser(self.query)
+            logger.info('[%s] : [INFO] Detection query set as %s ',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(queryd))
             if self.type == 'clustering':
-                print "Collect data ..."
-                systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn, cassandraReturn, mongoReturn = self.getData(detect=True)
-                # if list(set(self.dformat.fmHead) - set(list(yarnReturn.columns.values))):
-                #     print "Mismatch between desired and loaded data"
-                #     sys.exit()
-                # if self.dataNodeTraining != self.dataNodeDetecting:
-                #     print "Detected datanode discrepancies; training %s, detecting %s" %(self.dataNodeTraining, self.dataNodeDetecting)
-                #     logger.error('[%s] : [ERROR]Detected datanode discrepancies; training %s, detecting %s',
-                #          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.dataNodeTraining, self.dataNodeDetecting)
-                #     sys.exit(1)
-                yarnReturn = self.filterData(yarnReturn) #todo
-                if checkpoint:
-                    dataf = tempfile.NamedTemporaryFile(suffix='.csv')
-                    self.dformat.df2csv(yarnReturn, dataf.name)
-                    data = dataf.name
-                else:
-                    dataf = os.path.join(self.dataDir, 'Final_Merge.csv')
-                    data = dataf
-                if self.method in self.allowedMethodsClustering:
-                    print "Detecting with selected method %s of type %s" % (self.method, self.type)
-                    if os.path.isfile(os.path.join(self.modelsDir, self.modelName(self.method, self.load))):
-                        print "Model found at %s" % str(
-                            os.path.join(self.modelsDir, self.modelName(self.method, self.load)))
-                        wekaList = ['skm', 'em', 'dbscan']
-                        if self.method in wekaList:
-                            anomalies = self.dweka.runclustermodel(self.method, self.load, data)
-                            # print ut2hum(e)
-                            a = {"method": self.method, "qinterval": self.qinterval, "anomalies": anomalies}
-                            self.reportAnomaly(a)
-                        else:
-                            smodel = sdmon.SciCluster(modelDir=self.modelDir)
-                            anomalies = smodel.detect(self.method, self.load, yarnReturn)
-                            anomalies['method'] = self.method
-                            anomalies['qinterval'] = self.qinterval
-                            self.reportAnomaly(anomalies)
+                while True:
+                    print "Collect data ..."
+                    systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn, cassandraReturn, mongoReturn = self.getData(detect=True)
+                    # if list(set(self.dformat.fmHead) - set(list(yarnReturn.columns.values))):
+                    #     print "Mismatch between desired and loaded data"
+                    #     sys.exit()
+                    # if self.dataNodeTraining != self.dataNodeDetecting:
+                    #     print "Detected datanode discrepancies; training %s, detecting %s" %(self.dataNodeTraining, self.dataNodeDetecting)
+                    #     logger.error('[%s] : [ERROR]Detected datanode discrepancies; training %s, detecting %s',
+                    #          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.dataNodeTraining, self.dataNodeDetecting)
+                    #     sys.exit(1)
 
+                    if 'yarn' in queryd:
+                        yarnReturn = self.filterData(yarnReturn) #todo
+                        if checkpoint:
+                            dataf = tempfile.NamedTemporaryFile(suffix='.csv')
+                            self.dformat.df2csv(yarnReturn, dataf.name)
+                            data = dataf.name
+                        else:
+                            dataf = os.path.join(self.dataDir, 'Final_Merge.csv')
+                            data = dataf
+                    elif 'storm' in queryd:
+                        stormReturn = self.filterData(stormReturn)
+                        if checkpoint:
+                            # dataf = tempfile.NamedTemporaryFile(suffix='.csv')
+                            # self.dformat.df2csv(stormReturn, dataf.name)
+                            data = stormReturn
+                        else:
+                            dataf = os.path.join(self.dataDir, 'Storm.csv')
+                            data = dataf
+
+                    if self.method in self.allowedMethodsClustering:
+                        print "Detecting with selected method %s of type %s" % (self.method, self.type)
+                        if os.path.isfile(os.path.join(self.modelsDir, self.modelName(self.method, self.load))):
+                            print "Model found at %s" % str(
+                                os.path.join(self.modelsDir, self.modelName(self.method, self.load)))
+                            wekaList = ['skm', 'em', 'dbscan']
+                            if self.method in wekaList:
+                                anomalies = self.dweka.runclustermodel(self.method, self.load, data)
+                                # print ut2hum(e)
+                                a = {"method": self.method, "qinterval": self.qinterval, "anomalies": anomalies}
+                                self.reportAnomaly(a)
+                                sleep(parseDelay(self.delay))
+                            else:
+                                smodel = sdmon.SciCluster(modelDir=self.modelsDir)
+                                anomalies = smodel.detect(self.method, self.load, data)
+                                anomalies['method'] = self.method
+                                anomalies['qinterval'] = self.qinterval
+                                self.reportAnomaly(anomalies)
+                                sleep(parseDelay(self.delay))
+                        else:
+                            logger.error('[%s] : [ERROR] Model %s not found at %s ',
+                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.load,
+                                     str(os.path.join(self.modelsDir, self.modelName(self.method, self.load))))
+                            print "Model not found %s" % self.modelName(self.method, self.load)
+                            sys.exit(1)
                     else:
-                        logger.error('[%s] : [ERROR] Model %s not found at %s ',
-                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.load,
-                                 str(os.path.join(self.modelsDir, self.modelName(self.method, self.load))))
-                        print "Model not found %s" % self.modelName(self.method, self.load)
+                        print "Unknown method %s of type %s" % (self.method, self.type)
+                        logger.error('[%s] : [ERROR] Unknown method %s of type %s ',
+                                 datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.method,
+                                 self.type)
                         sys.exit(1)
-                else:
-                    print "Unknown method %s of type %s" % (self.method, self.type)
-                    logger.error('[%s] : [ERROR] Unknown method %s of type %s ',
-                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.method,
-                             self.type)
-                    sys.exit(1)
             elif self.type == 'classification':
                 print "Not yet supported!"  # TODO
                 sys.exit(0)
@@ -784,7 +801,6 @@ class AdpEngine:
             print "Detect is set to false, skipping..."
             logger.warning('[%s] : [WARN] Detect is set to false, skipping...',
                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
-        sleep(parseDelay(self.interval))
 
     def run(self, engine):
         try:
@@ -795,6 +811,10 @@ class AdpEngine:
             threadPoint.start()
             threadTrain.start()
             threadDetect.start()
+
+            threadPoint.join()
+            threadTrain.join()
+            threadDetect.join()
         except Exception as inst:
             logger.error('[%s] : [ERROR] Exception %s with %s during point thread execution, halting',
                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
@@ -808,6 +828,8 @@ class AdpEngine:
         :return:
         '''
         saveName = "%s_%s.model" %(methodname, modelName)
+        if not os.path.isfile(os.path.join(self.modelsDir,saveName)):
+            saveName = "%s_%s.pkl" %(methodname, modelName)
         return saveName
 
     def pushModel(self):
