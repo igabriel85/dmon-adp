@@ -828,6 +828,8 @@ class AdpEngine:
         :return:
         '''
         saveName = "%s_%s.model" %(methodname, modelName)
+        if not os.path.isfile(os.path.join(self.modelsDir,saveName)):
+            saveName = "%s_%s.pkl" %(methodname, modelName)
         return saveName
 
     def pushModel(self):
