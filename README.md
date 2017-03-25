@@ -3,7 +3,7 @@ DICE Anomaly Detection Platform
 
 Settings
 
-he:tf:m:vx:d:
+```he:tf:m:vx:d```:
 
 h -> Help text
 e -> ES endpoint
