@@ -105,42 +105,52 @@ class SciCluster:
         :return: -> dictionary that contains the list of anomalous timestamps
         '''
         smodel = self.__loadClusterModel(method, model)
+        anomalieslist = []
         if not smodel:
-            pass
+            dpredict = 0
         else:
-            anomalieslist = []
-            if isinstance(smodel, IsolationForest):
-                print "Detected IsolationForest model"
-                print "Contamination -> %s" % smodel.contamination
-                print "Max_Features -> %s" % smodel.max_features
-                print "Max_Samples -> %s" % smodel.max_samples_
-                print "Threashold -> %s " % smodel.threshold_
-                dpredict = smodel.predict(data)
+            if data.shape[0]:
+                if isinstance(smodel, IsolationForest):
+                    print "Detected IsolationForest model"
+                    print "Contamination -> %s" % smodel.contamination
+                    print "Max_Features -> %s" % smodel.max_features
+                    print "Max_Samples -> %s" % smodel.max_samples_
+                    print "Threashold -> %s " % smodel.threshold_
+                    try:
+                        dpredict = smodel.predict(data)
+                    except Exception as inst:
+                        logger.error('[%s] : [ERROR] Error while fitting isolationforest model to event with %s and %s',
+                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+                        dpredict = 0
 
-            elif isinstance(smodel, DBSCAN):
-                print "Detected DBSCAN model"
-                print "Leaf_zise -> %s" % smodel.leaf_size
-                print "Algorithm -> %s" % smodel.algorithm
-                print "EPS -> %s" % smodel.eps
-                print "Min_Samples -> %s" % smodel.min_samples
-                print "N_jobs -> %s" % smodel.n_jobs
-                dpredict = smodel.fit_predict(data)
-
-            anomalyarray = np.argwhere(dpredict == -1)
-            for an in anomalyarray:
-                anomalies = {}
-                anomalies['utc'] = int(data.iloc[an[0]]['key'])
-                anomalies['hutc'] = ut2hum(int(data.iloc[an[0]]['key']))
-                anomalieslist.append(anomalies)
-            # print anomalyarray
-            # {method: "<method_name>",
-            #  qInterval: "<qInterval>",
-            #  anomalies: [
-            #      {"utc": "<utc_time>",
-            #       "hutc": "<hutctime>"},
-            #      {"utc": "<utc_time>",
-            #       "hutc": "<hutctime>"}]
-            #  }
+                elif isinstance(smodel, DBSCAN):
+                    print "Detected DBSCAN model"
+                    print "Leaf_zise -> %s" % smodel.leaf_size
+                    print "Algorithm -> %s" % smodel.algorithm
+                    print "EPS -> %s" % smodel.eps
+                    print "Min_Samples -> %s" % smodel.min_samples
+                    print "N_jobs -> %s" % smodel.n_jobs
+                    try:
+                        dpredict = smodel.fit_predict(data)
+                    except Exception as inst:
+                        logger.error('[%s] : [ERROR] Error while fitting sDBSCAN model to event with %s and %s',
+                                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst),
+                                     inst.args)
+                        dpredict = 0
+            else:
+                dpredict = 0
+                logger.warning('[%s] : [WARN] Dataframe empty with shape (%s,%s)',
+                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(data.shape[0]),
+                             str(data.shape[1]))
+                print "Empty dataframe received with shape (%s,%s)" % (str(data.shape[0]),
+                             str(data.shape[1]))
+            if dpredict:
+                anomalyarray = np.argwhere(dpredict == -1)
+                for an in anomalyarray:
+                    anomalies = {}
+                    anomalies['utc'] = int(data.iloc[an[0]]['key'])
+                    anomalies['hutc'] = ut2hum(int(data.iloc[an[0]]['key']))
+                    anomalieslist.append(anomalies)
         anomaliesDict = {}
         anomaliesDict['anomalies'] = anomalieslist
         logger.info('[%s] : [INFO] Detected anomalies with model %s using method %s are -> %s',
