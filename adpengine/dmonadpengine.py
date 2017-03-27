@@ -71,15 +71,20 @@ class AdpEngine:
         print "General es dmon info -> %s" %resInfo
 
         interval = self.dmonConnector.getInterval()
-
-        if int(self.qinterval[:-1]) < interval['System']:
-            logger.warning('[%s] : [WARN] System Interval smaller than set interval!',
-                           datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
-            print "Warning query interval difference detected, dmon interval is %s while adp is %s!" %(self.qinterval, interval['System'])
-        else:
-            print "Query interval check passed."
-            logger.info('[%s] : [INFO] Query interval check passed!',
-                           datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        try:
+            if int(self.qinterval[:-1]) < interval['System']:
+                logger.warning('[%s] : [WARN] System Interval smaller than set interval!',
+                               datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+                print "Warning query interval difference detected, dmon interval is %s while adp is %s!" %(self.qinterval, interval['System'])
+            else:
+                print "Query interval check passed."
+                logger.info('[%s] : [INFO] Query interval check passed!',
+                               datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        except Exception as inst:
+            logger.error('[%s] : [ERROR] System Interval not set in dmon!',
+                               datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+            print "System Interval not set in dmon! Exiting ..."
+            sys.exit(1)
 
         resClusterState = self.dmonConnector.clusterHealth()
         print "ES cluster health -> %s" %resClusterState
