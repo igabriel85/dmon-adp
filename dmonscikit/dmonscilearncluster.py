@@ -144,7 +144,7 @@ class SciCluster:
                              str(data.shape[1]))
                 print "Empty dataframe received with shape (%s,%s)" % (str(data.shape[0]),
                              str(data.shape[1]))
-            if dpredict.any():
+            if type(dpredict) is not int:
                 anomalyarray = np.argwhere(dpredict == -1)
                 for an in anomalyarray:
                     anomalies = {}
