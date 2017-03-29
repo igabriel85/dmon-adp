@@ -333,6 +333,11 @@ class DataFormatter:
         '''
         # dataFrame.set_index('key', inplace=True) -> if inplace it modifies all copies of df including
         # in memory resident ones
+        if dataFrame.empty:
+            logger.error('[%s] : [ERROR] Received empty dataframe for  %s ',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), mergedFile)
+            print "Received mepty dataframe for %s " % mergedFile
+            sys.exit(1)
         try:
             kDF = dataFrame.set_index('key')
         except Exception as inst:
