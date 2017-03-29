@@ -791,6 +791,7 @@ class AdpEngine:
                                 anomalies = smodel.detect(self.method, self.load, data)
                                 if not anomalies['anomalies']:
                                     logger.info('[%s] : [INFO] No anomalies detected with IsolationForest', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+                                    print "No anomalies detected with IsolationForest"
                                     sleep(parseDelay(self.delay))
                                 else:
                                     anomalies['method'] = self.method
