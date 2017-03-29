@@ -70,7 +70,7 @@ class SciCluster:
 
         if settings['max_samples'] != 'auto':
             settings['max_samples'] = int(settings['max_samples'])
-        print type(settings['max_samples'])
+        # print type(settings['max_samples'])
         for k, v in settings.iteritems():
             logger.info('[%s] : [INFO] IsolationForest %s set to %s',
                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), k, v)
@@ -118,6 +118,7 @@ class SciCluster:
                     print "Threashold -> %s " % smodel.threshold_
                     try:
                         dpredict = smodel.predict(data)
+                        print "IsolationForest Prediction Array -> %s" %str(dpredict)
                     except Exception as inst:
                         logger.error('[%s] : [ERROR] Error while fitting isolationforest model to event with %s and %s',
                              datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
@@ -144,6 +145,7 @@ class SciCluster:
                              str(data.shape[1]))
                 print "Empty dataframe received with shape (%s,%s)" % (str(data.shape[0]),
                              str(data.shape[1]))
+            print "dpredict type is %s" % (type(dpredict))
             if type(dpredict) is not int:
                 anomalyarray = np.argwhere(dpredict == -1)
                 for an in anomalyarray:
