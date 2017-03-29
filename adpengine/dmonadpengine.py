@@ -718,12 +718,22 @@ class AdpEngine:
                         responseD = {}
                         if val['bound'] == 'gd':
                             anomalies = self.adppoint.detpoint(dict_system, type=type, threashold=val['threashold'], lt=False)
-                            responseD['anomalies'] = anomalies
-                            self.reportAnomaly(responseD)
+                            if anomalies:
+                                responseD['anomalies'] = anomalies
+                                self.reportAnomaly(responseD)
+                            else:
+                                logger.info('[%s] : [INFO] No point anomalies detected ',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+                                print "No point anomalies detected"
                         else:
                             anomalies = self.adppoint.detpoint(dict_system, type=type, threashold=val['threashold'], lt=True)
-                            responseD['anomalies'] = anomalies
-                            self.reportAnomaly(responseD)
+                            if anomalies:
+                                responseD['anomalies'] = anomalies
+                                self.reportAnomaly(responseD)
+                            else:
+                                logger.info('[%s] : [INFO] No point anomalies detected ',
+                                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+                                print "No point anomalies detected"
                         sleep(parseDelay(self.delay))
 
     def detectAnomalies(self):
@@ -779,10 +789,14 @@ class AdpEngine:
                             else:
                                 smodel = sdmon.SciCluster(modelDir=self.modelsDir)
                                 anomalies = smodel.detect(self.method, self.load, data)
-                                anomalies['method'] = self.method
-                                anomalies['qinterval'] = self.qinterval
-                                self.reportAnomaly(anomalies)
-                                sleep(parseDelay(self.delay))
+                                if not anomalies['anomalies']:
+                                    logger.info('[%s] : [INFO] No anomalies detected with IsolationForest', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+                                    sleep(parseDelay(self.delay))
+                                else:
+                                    anomalies['method'] = self.method
+                                    anomalies['qinterval'] = self.qinterval
+                                    self.reportAnomaly(anomalies)
+                                    sleep(parseDelay(self.delay))
                         else:
                             logger.error('[%s] : [ERROR] Model %s not found at %s ',
                              datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.load,

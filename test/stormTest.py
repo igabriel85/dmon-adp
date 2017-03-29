@@ -2,26 +2,26 @@ from dataformatter import DataFormatter
 from pyQueryConstructor import QueryConstructor
 import os
 from dmonconnector import Connector
+from adpconfig import readConf
 
-if __name__ == '__main__':
-    # dataDir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
-    modelDir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
-    dataDir = '/Users/Gabriel/Documents/workspaces/diceWorkspace/dmon-adp/data'
 
-    #Standard query values
-    # qte = 1475842980000
-    # qlte = 1475845200000
-    qgte = 1481751128740
-    qlte = 1481752928740
-
-    qsize = 0
-    qinterval = "60s"
-    dmonEndpoint = '85.120.206.95'
-
-    spouts = 1
-    bolts = 2
-
+def stormDump(dmonEndpoint, qgte, qlte, qsize, qinterval):
+    '''
+    :param dmonEndpoint: -> DMON endpoint
+    :param qgte: -> greater than timestamp
+    :param qlte: -> less than timestamp
+    :param qsize: -> query size
+    :param qinterval: -> query interval
+    :return:
+    '''
     dmonConnector = Connector(dmonEndpoint)
+    stormTopology = dmonConnector.getStormTopology()
+
+    bolts = stormTopology['bolts']
+    spouts = stormTopology['spouts']
+    print "Detected %s bolts" % str(bolts)
+    print "Detected %s spouts" % str(spouts)
+
     qConstructor = QueryConstructor()
     dformat = DataFormatter(dataDir)
 
@@ -34,3 +34,24 @@ if __name__ == '__main__':
     print "Response:"
     print gstorm
     dformat.dict2csv(gstorm, qstorm, storm_file)
+
+if __name__ == '__main__':
+    dataDir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
+
+    file_conf = 'dmonadp.ini'
+    readCnf = readConf(file_conf)
+    print os.path.abspath(file_conf)
+
+    print 'DMON endpoint set to -> %s ' % str(readCnf['Connector']['esendpoint'])
+    print 'Query from -> %s' % str(readCnf['Connector']['from'])
+    print 'Query to -> %s' % str(readCnf['Connector']['to'])
+    print 'Query size -> %s' % str(readCnf['Connector']['qsize'])
+    print 'Query interval -> %s' % str(readCnf['Connector']['qinterval'])
+
+    stormDump(dmonEndpoint=readCnf['Connector']['esendpoint'], qgte=readCnf['Connector']['from'],
+              qlte=readCnf['Connector']['to'], qsize=readCnf['Connector']['qsize'],
+              qinterval=readCnf['Connector']['qinterval'])
+
+
+
+
