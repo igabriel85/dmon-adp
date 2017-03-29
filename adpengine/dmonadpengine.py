@@ -551,9 +551,11 @@ class AdpEngine:
                 if self.method in self.allowedMethodsClustering:
                     print "Training with selected method %s of type %s" % (self.method, self.type)
                     if checkpoint:
-                        dataf = tempfile.NamedTemporaryFile(suffix='.csv')
-                        self.dformat.df2csv(udata, dataf.name)
-                        data = dataf.name
+                        dfcomp = ['sdbscan', 'isoforest'] # TODO expand to all dataframe supporting methods
+                        if self.method not in dfcomp:
+                            dataf = tempfile.NamedTemporaryFile(suffix='.csv')
+                            self.dformat.df2csv(udata, dataf.name)
+                            data = dataf.name
                     else:
                         if 'yarn' in queryd:
                             dataf = os.path.join(self.dataDir, 'Final_Merge.csv')
@@ -767,8 +769,6 @@ class AdpEngine:
                     elif 'storm' in queryd:
                         stormReturn = self.filterData(stormReturn)
                         if checkpoint:
-                            # dataf = tempfile.NamedTemporaryFile(suffix='.csv')
-                            # self.dformat.df2csv(stormReturn, dataf.name)
                             data = stormReturn
                         else:
                             dataf = os.path.join(self.dataDir, 'Storm.csv')
