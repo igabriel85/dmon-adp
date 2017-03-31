@@ -722,21 +722,26 @@ class AdpEngine:
                             anomalies = self.adppoint.detpoint(dict_system, type=type, threashold=val['threashold'], lt=False)
                             if anomalies:
                                 responseD['anomalies'] = anomalies
-                                self.reportAnomaly(responseD)
+                                # self.reportAnomaly(responseD)
                             else:
-                                logger.info('[%s] : [INFO] No point anomalies detected ',
-                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
-                                print "No point anomalies detected"
+                                logger.info('[%s] : [INFO] No point anomalies detected for type %s',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type)
+                                print "No point anomalies detected for %s " % type
                         else:
                             anomalies = self.adppoint.detpoint(dict_system, type=type, threashold=val['threashold'], lt=True)
                             if anomalies:
                                 responseD['anomalies'] = anomalies
-                                self.reportAnomaly(responseD)
+                                # self.reportAnomaly(responseD)
                             else:
-                                logger.info('[%s] : [INFO] No point anomalies detected ',
-                                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
-                                print "No point anomalies detected"
-                        sleep(parseDelay(self.delay))
+                                logger.info('[%s] : [INFO] No point anomalies detected for type %s ',
+                                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type)
+                                print "No point anomalies detected for type %s" % type
+                    if responseD:
+                        self.reportAnomaly(responseD)
+                    else:
+                        logger.info('[%s] : [INFO] No point anomalies detected',
+                                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+                    sleep(parseDelay(self.delay))
 
     def detectAnomalies(self):
         if str2Bool(self.detect):
