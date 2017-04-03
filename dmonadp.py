@@ -88,6 +88,7 @@ def main(argv):
             print '   -> allowed methods: skm, em, dbscan, sdbscan, isoforest'
             print '-x -> export model name'
             print '-v -> validation'
+            print '-q -> query string for anomaly detection'
             print "#" * 100
             sys.exit(0)
         elif opt in ("-e", "--endpoint"):
