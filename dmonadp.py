@@ -79,7 +79,17 @@ def main(argv):
         sys.exit(0)
     for opt, arg in opts:
         if opt == '-h':
-            print 'Help message!'
+            print "#" * 100
+            print 'DICE Anomaly detection Tool'
+            print 'Utilisation:'
+            print '-f -> condifuration file location'
+            print '-t -> activate training mode'
+            print '-m -> methods'
+            print '   -> allowed methods: skm, em, dbscan, sdbscan, isoforest'
+            print '-x -> export model name'
+            print '-v -> validation'
+            print '-q -> query string for anomaly detection'
+            print "#" * 100
             sys.exit(0)
         elif opt in ("-e", "--endpoint"):
             settings['esendpoint'] = arg
