@@ -2,6 +2,7 @@ from dmonconnector import *
 from dmonpoint import *
 from util import queryParser, nodesParse, str2Bool, cfilterparse, rfilterparse, pointThraesholds, parseDelay, parseMethodSettings, ut2hum
 from threadRun import AdpDetectThread, AdpPointThread, AdpTrainThread
+from multiprocRun import AdpDetectProcess, AdpPointProcess, AdpTrainProcess
 from dmonweka import dweka
 from time import sleep
 import tempfile
@@ -833,15 +834,44 @@ class AdpEngine:
             threadTrain = AdpTrainThread(engine, 'Train')
             threadDetect = AdpDetectThread(engine, 'Detect')
 
-            threadPoint.start()
+            # threadPoint.start()
             threadTrain.start()
             threadDetect.start()
 
-            threadPoint.join()
+            # threadPoint.join()
             threadTrain.join()
             threadDetect.join()
         except Exception as inst:
-            logger.error('[%s] : [ERROR] Exception %s with %s during point thread execution, halting',
+            logger.error('[%s] : [ERROR] Exception %s with %s during thread execution, halting',
+                           datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+            sys.exit(1)
+        return 0
+
+    def runProcess(self, engine):
+        proc = []
+        try:
+            pPoint = AdpPointProcess(engine, 'Point Proc')
+            pTrain = AdpTrainProcess(engine, 'Train Proc')
+            pDetect = AdpDetectProcess(engine, 'Detect Proc')
+
+            processPoint = pPoint.run()
+            proc.append(processPoint)
+            processTrain = pTrain.run()
+            proc.append(processTrain)
+            processDetect = pDetect.run()
+            proc.append(processDetect)
+
+
+            processPoint.start()
+            processTrain.start()
+            processDetect.start()
+
+            for p in proc:
+                p.join()
+                print '%s.exitcode = %s' % (p.name, p.exitcode)
+
+        except Exception as inst:
+            logger.error('[%s] : [ERROR] Exception %s with %s during process execution, halting',
                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
             sys.exit(1)
         return 0
