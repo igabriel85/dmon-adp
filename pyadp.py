@@ -13,8 +13,8 @@ if __name__ == '__main__':
     #Standard query values
     # qte = 1475842980000
     # qlte = 1475845200000
-    qgte = 1477561800000
-    qlte = 1477562100000
+    qgte = 1477911300000
+    qlte = 1477914720000
 
     qsize = 0
     qinterval = "10s"
@@ -235,3 +235,4 @@ if __name__ == '__main__':
     #print len(response)
     #print response2
     #print len(response2)
+

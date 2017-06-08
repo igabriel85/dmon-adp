@@ -78,6 +78,8 @@ def queryParser(query):
                 type['mongodb'] = r.split(':')[1].split(', ')
             except:
                 type['mongodb'] = 0
+        if r.split(':')[0] == 'userquery':
+            type['userquery'] = 0
     return type
 
 

@@ -1,0 +1,60 @@
+{
+  "size": 0,
+  "query": {
+    "filtered": {
+      "query": {
+        "query_string": {
+          "query": "collectd_type:\"load\" AND host:\"vm-cluster-storm4\"",
+          "analyze_wildcard": true
+        }
+      },
+      "filter": {
+        "bool": {
+          "must": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": 1496940356413,
+                  "lte": 1496954756413,
+                  "format": "epoch_millis"
+                }
+              }
+            }
+          ],
+          "must_not": []
+        }
+      }
+    }
+  },
+  "aggs": {
+    "2": {
+      "date_histogram": {
+        "field": "@timestamp",
+        "interval": "1s",
+        "time_zone": "Europe/Helsinki",
+        "min_doc_count": 1,
+        "extended_bounds": {
+          "min": 1496940356413,
+          "max": 1496954756413
+        }
+      },
+      "aggs": {
+        "1": {
+          "avg": {
+            "field": "shortterm"
+          }
+        },
+        "3": {
+          "avg": {
+            "field": "midterm"
+          }
+        },
+        "4": {
+          "avg": {
+            "field": "longterm"
+          }
+        }
+      }
+    }
+  }
+}

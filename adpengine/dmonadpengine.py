@@ -10,7 +10,7 @@ from dmonscikit import dmonscilearncluster as sdmon
 
 
 class AdpEngine:
-    def __init__(self, settingsDict, dataDir, modelsDir):
+    def __init__(self, settingsDict, dataDir, modelsDir, queryDir):
         self.esendpoint = settingsDict['esendpoint']
         self.esInstanceEndpoint = settingsDict['esInstanceEndpoint']
         self.adppoint = AdpPoint(settingsDict['esendpoint'])
@@ -36,13 +36,14 @@ class AdpEngine:
         self.resetIndex = settingsDict['resetindex']
         self.dataDir = dataDir
         self.modelsDir = modelsDir
+        self.queryDir = queryDir
         self.anomalyIndex = "anomalies"
         self.regnodeList = []
         self.allowedMethodsClustering = ['skm', 'em', 'dbscan', 'sdbscan', 'isoforest']
         self.allowefMethodsClassification = []  # TODO
         self.heap = settingsDict['heap']
         self.dmonConnector = Connector(self.esendpoint, dmonPort=self.dmonPort, index=self.index)
-        self.qConstructor = QueryConstructor()
+        self.qConstructor = QueryConstructor(self.queryDir)
         self.dformat = DataFormatter(self.dataDir)
         self.dweka = dweka(self.dataDir, self.modelsDir, wHeap=self.heap)
         self.cfilter = settingsDict['cfilter']
@@ -61,6 +62,7 @@ class AdpEngine:
         self.mapmetrics = 0
         self.reducemetrics = 0
         self.mrapp = 0
+        self.userQueryReturn = 0
         self.dataNodeTraining = 0
         self.dataNodeDetecting = 0
 
@@ -461,10 +463,12 @@ class AdpEngine:
                 self.stormReturn = df_storm
         elif 'cassandra' in queryd:
             # desNodes = ['cassandra-1']  #REMOVE only for casasndra testing
-            self.cassandraReturn = self.getCassandra(desNodes)
+            self.cassandraReturn = self.getCassandra(desNodes, detect=detect)
         elif 'mongodb' in queryd:
-            self.mongoReturn = self.getMongodb(desNodes)
-        return self.systemReturn, self.yarnReturn, self.reducemetrics, self.mapmetrics, self.mrapp, self.sparkReturn, self.stormReturn, self.cassandraReturn, self.mongoReturn
+            self.mongoReturn = self.getMongodb(desNodes, detect=detect)
+        elif 'userquery' in queryd:
+            self.userQueryReturn = self.getQuery(detect=detect)
+        return self.systemReturn, self.yarnReturn, self.reducemetrics, self.mapmetrics, self.mrapp, self.sparkReturn, self.stormReturn, self.cassandraReturn, self.mongoReturn, self.userQueryReturn
 
     def filterData(self, df, m=False):
         '''
@@ -524,7 +528,7 @@ class AdpEngine:
             print "Getting data ..."
             checkpoint = str2Bool(self.checkpoint)
             queryd = queryParser(self.query)
-            systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn, cassandraReturn, mongoReturn = self.getData()
+            systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn, cassandraReturn, mongoReturn, userqueryReturn = self.getData()
             if not checkpoint:
                 if 'yarn' in queryd:
                     udata = self.dformat.toDF(os.path.join(self.dataDir, 'Final_Merge.csv'))
@@ -536,6 +540,8 @@ class AdpEngine:
                     udata = self.dformat.toDF(os.path.join(self.dataDir, 'Merged_Mongo.csv'))
                 elif 'spark' in queryd:
                     return "not yet implemented"  # todo
+                elif 'userquery' in queryd:
+                    udata = self.dformat.toDF(os.path.join(self.dataDir, 'query_response.csv'))
             else:
                 if 'yarn' in queryd:
                     udata = yarnReturn
@@ -547,6 +553,8 @@ class AdpEngine:
                     udata = mongoReturn
                 elif 'spark' in queryd:
                     return "not yet implemented"  # todo
+                elif 'userquery' in queryd:
+                    udata = userqueryReturn
             udata = self.filterData(udata) #todo check
             if self.type == 'clustering':
                 if self.method in self.allowedMethodsClustering:
@@ -572,6 +580,8 @@ class AdpEngine:
                             dataf = os.path.join(self.dataDir, 'Merged_Cassandra.csv')
                         elif 'mongodb' in queryd:
                             dataf = os.path.join(self.dataDir, 'Merged_Mongo.csv')
+                        elif 'userquery' in queryd:
+                            dataf = os.path.join(self.dataDir, 'query_response.csv')
                         data = dataf
                     if self.method == 'skm':
                         print "Method %s settings detected -> %s" % (self.method, str(self.methodSettings))
@@ -753,7 +763,7 @@ class AdpEngine:
             if self.type == 'clustering':
                 while True:
                     print "Collect data ..."
-                    systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn, cassandraReturn, mongoReturn = self.getData(detect=True)
+                    systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn, cassandraReturn, mongoReturn, userQueryReturn = self.getData(detect=True)
                     # if list(set(self.dformat.fmHead) - set(list(yarnReturn.columns.values))):
                     #     print "Mismatch between desired and loaded data"
                     #     sys.exit()
@@ -1352,6 +1362,73 @@ class AdpEngine:
         else:
             return df_MD
 
+    def getQuery(self, detect=False):
+        if not os.path.isfile(os.path.join(self.queryDir, 'query.json')):
+            logger.error('[%s] : [ERROR] No user defined query found in queries directory!',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+            print "No user defined query found in queries directory! Exiting ..."
+            sys.exit(1)
+        logger.info('[%s] : [INFO] Started User defined querying  ...',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        checkpoint = str2Bool(self.checkpoint)
+        query = self.qConstructor.sideQuery()
+        try:
+            # Query string
+            queryStr =  query['query']['filtered']['query']['query_string']['query']
+
+            # Query range
+            if detect:
+                query['query']['filtered']['filter']['bool']['must'][0]['range']['@timestamp']['gte'] = "now-%s" % self.interval
+                query['query']['filtered']['filter']['bool']['must'][0]['range']['@timestamp']['lte'] = "now"
+                logger.info('[%s] : [INFO] User defined query detect set with interval %s!',
+                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'),
+                            str(self.interval))
+            qfrom = query['query']['filtered']['filter']['bool']['must'][0]['range']['@timestamp']['gte']
+            qto = query['query']['filtered']['filter']['bool']['must'][0]['range']['@timestamp']['lte']
+
+            # Query Size
+            qSize = query['size']
+
+            # Query Aggs
+            if len(query['aggs'].values()) > 1:
+                logger.error('[%s] : [ERROR] Aggregation type unsupported, got length %s expected 1!',
+                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(len(query['aggs'].values())))
+                print "Aggregation type unsupported, got length %s expected 1!" % str(len(query['aggs'].values()))
+                sys.exit(1)
+            else:
+                qInterval = query['aggs'].values()[0]['date_histogram']['interval']
+                if detect:
+                    query['aggs'].values()[0]['date_histogram']['extended_bounds']['min'] = "now-%s" % self.interval
+                    query['aggs'].values()[0]['date_histogram']['extended_bounds']['max'] = "now"
+                qMin = query['aggs'].values()[0]['date_histogram']['extended_bounds']['min']
+                qMax = query['aggs'].values()[0]['date_histogram']['extended_bounds']['max']
+        except Exception as inst:
+            logger.error('[%s] : [ERROR] Unsupported query detected with %s and %s!',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+            print "Unsupported query detected! Exiting ..."
+            sys.exit(1)
+        logger.info('[%s] : [INFO] Query succesfully parsed; querystring -> %s, from-> %s, to-> %s, size-> %s, interval-> %s',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), queryStr, qfrom, qto, qSize, qInterval)
+        print "User Query Succesfully parsed: "
+        print "querystring -> %s" % queryStr
+        print "from-> %s" % qfrom
+        print "to-> %s" % qto
+        print "size-> %s" % qSize
+        print "interval-> %s" % qInterval
+        response_file = self.qConstructor.sideQueryString()
+        guserQuery = self.dmonConnector.aggQuery(query)
+
+        if not checkpoint:
+            self.dformat.dict2csv(guserQuery, query, response_file)
+            returnUQ = 0
+        else:
+            df_UQ = self.dformat.dict2csv(guserQuery, query, response_file, df=checkpoint)
+            # df_NN.set_index('key', inplace=True)
+            returnUQ = df_UQ
+        print "Querying  Name Node metrics complete"
+        logger.info('[%s] : [INFO] Querying  Name Node metrics complete',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        return returnUQ
 
     def printTest(self):
         print "Endpoint -> %s" %self.esendpoint
