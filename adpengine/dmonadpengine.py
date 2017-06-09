@@ -789,7 +789,13 @@ class AdpEngine:
                         else:
                             dataf = os.path.join(self.dataDir, 'Storm.csv')
                             data = dataf
-
+                    elif 'userquery' in queryd:
+                        userQueryReturn = self.filterData(userQueryReturn)
+                        if checkpoint:
+                            data = userQueryReturn
+                        else:
+                            dataf = os.path.join(self.dataDir, 'query_response.csv')
+                            data = dataf
                     if self.method in self.allowedMethodsClustering:
                         print "Detecting with selected method %s of type %s" % (self.method, self.type)
                         if os.path.isfile(os.path.join(self.modelsDir, self.modelName(self.method, self.load))):
@@ -1347,7 +1353,7 @@ class AdpEngine:
             lmongoGauge.append(self.dformat.dict2csv(gmongodbGauge, qmongodbGauge, mongodbGauge_file))
 
 
-    #Merge and rename by node system File
+        #Merge and rename by node system File
         df_MD_Count = self.dformat.chainMergeMongoDB(lmongoCounter)
         df_MD_Gauge = self.dformat.chainMergeMongoDB(lmongoGauge)
 
