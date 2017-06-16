@@ -65,7 +65,12 @@ def main(argv):
         "checkpoint": None,
         "delay": None,
         "interval": None,
-        "resetindex": None
+        "resetindex": None,
+        "training":None,
+        "validation":None,
+        "validratio":0,
+        "compare": False,
+        "target": None
     }
 
     # Only for testing
@@ -504,7 +509,7 @@ def main(argv):
             settings["resetindex"] = False
     else:
         print "Reset index set to %s" % settings["resetindex"]
-    logger.info('[%s] : [INFO] Reset index set to %s"',
+    logger.info('[%s] : [INFO] Reset index set to %s',
                 datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['resetindex'])
 
     try:
@@ -515,6 +520,40 @@ def main(argv):
     logger.info('[%s] : [INFO] DMon Port is set to %s"',
                 datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(settings['dmonPort']))
 
+    try:
+        print "Classification Training set is %s" % readCnf['Detect']['training']
+        settings['training'] = readCnf['Detect']['training']
+    except:
+        print "Classification training set is default"
+    logger.info('[%s] : [INFO] Classification Training set is %s',
+                datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(settings['training']))
+
+    try:
+        print "Classification Validation set is %s" % readCnf['Detect']['validation']
+        settings['validation'] = readCnf['Detect']['validation']
+    except:
+        print "Classification Validation set is default"
+    logger.info('[%s] : [INFO] Classification Validation set is %s',
+                datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(settings['validation']))
+
+    try:
+        print "Classification validation ratio is set to %d" % int(readCnf['Detect']['validratio'])
+        if float(readCnf['Detect']['validratio']) > 1.0:
+            print "Validation ratio is out of range, must be between 1.0 and 0.1"
+            settings['validratio'] = 0.0
+        settings['validratio'] = float(readCnf['Detect']['validratio'])
+    except:
+        print "Classification Validation ratio is default"
+    logger.info('[%s] : [INFO] Classification Validation ratio is %s',
+                datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(settings['validratio']))
+
+    try:
+        print "Classification comparison is set to %s" % readCnf['Detect']['compare']
+        settings['compare'] = readCnf['Detect']['compare']
+    except:
+        print "Classification comarison is default"
+    logger.info('[%s] : [INFO] Classification comparison is %s',
+                datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['compare'])
     #if settings["esendpoint"] == None:
 
     #dmonC = Connector('85.120.206.27')
