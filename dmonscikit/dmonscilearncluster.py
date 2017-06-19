@@ -159,6 +159,7 @@ class SciCluster:
                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), model, method, str(anomaliesDict))
         return anomaliesDict
 
+
     def __serializemodel(self, model, method, mname):
         '''
         :param model: -> model
