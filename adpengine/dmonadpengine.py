@@ -1,15 +1,18 @@
 from dmonconnector import *
 from dmonpoint import *
+from dmonscikit import dmonscilearnclassification
 from util import queryParser, nodesParse, str2Bool, cfilterparse, rfilterparse, pointThraesholds, parseDelay, parseMethodSettings, ut2hum
 from threadRun import AdpDetectThread, AdpPointThread, AdpTrainThread
+from multiprocRun import AdpDetectProcess, AdpPointProcess, AdpTrainProcess
 from dmonweka import dweka
 from time import sleep
 import tempfile
 from dmonscikit import dmonscilearncluster as sdmon
+from dmonscikit import dmonscilearnclassification as cdmon
 
 
 class AdpEngine:
-    def __init__(self, settingsDict, dataDir, modelsDir):
+    def __init__(self, settingsDict, dataDir, modelsDir, queryDir):
         self.esendpoint = settingsDict['esendpoint']
         self.esInstanceEndpoint = settingsDict['esInstanceEndpoint']
         self.adppoint = AdpPoint(settingsDict['esendpoint'])
@@ -33,15 +36,21 @@ class AdpEngine:
         self.snetwork = settingsDict['snetwork']
         self.methodSettings = settingsDict['MethodSettings']
         self.resetIndex = settingsDict['resetindex']
+        self.trainingSet = settingsDict['training']
+        self.validationSet = settingsDict['validation']
+        self.anoOnly = settingsDict['anomalyOnly']
+        self.validratio = settingsDict['validratio']
+        self.compare = settingsDict['compare']
         self.dataDir = dataDir
         self.modelsDir = modelsDir
+        self.queryDir = queryDir
         self.anomalyIndex = "anomalies"
         self.regnodeList = []
         self.allowedMethodsClustering = ['skm', 'em', 'dbscan', 'sdbscan', 'isoforest']
-        self.allowefMethodsClassification = []  # TODO
+        self.allowefMethodsClassification = ['randomforest', 'decisiontree', 'sneural', 'adaboost', 'naivebayes']  # TODO
         self.heap = settingsDict['heap']
         self.dmonConnector = Connector(self.esendpoint, dmonPort=self.dmonPort, index=self.index)
-        self.qConstructor = QueryConstructor()
+        self.qConstructor = QueryConstructor(self.queryDir)
         self.dformat = DataFormatter(self.dataDir)
         self.dweka = dweka(self.dataDir, self.modelsDir, wHeap=self.heap)
         self.cfilter = settingsDict['cfilter']
@@ -60,6 +69,7 @@ class AdpEngine:
         self.mapmetrics = 0
         self.reducemetrics = 0
         self.mrapp = 0
+        self.userQueryReturn = 0
         self.dataNodeTraining = 0
         self.dataNodeDetecting = 0
 
@@ -460,10 +470,12 @@ class AdpEngine:
                 self.stormReturn = df_storm
         elif 'cassandra' in queryd:
             # desNodes = ['cassandra-1']  #REMOVE only for casasndra testing
-            self.cassandraReturn = self.getCassandra(desNodes)
+            self.cassandraReturn = self.getCassandra(desNodes, detect=detect)
         elif 'mongodb' in queryd:
-            self.mongoReturn = self.getMongodb(desNodes)
-        return self.systemReturn, self.yarnReturn, self.reducemetrics, self.mapmetrics, self.mrapp, self.sparkReturn, self.stormReturn, self.cassandraReturn, self.mongoReturn
+            self.mongoReturn = self.getMongodb(desNodes, detect=detect)
+        elif 'userquery' in queryd:
+            self.userQueryReturn = self.getQuery(detect=detect)
+        return self.systemReturn, self.yarnReturn, self.reducemetrics, self.mapmetrics, self.mrapp, self.sparkReturn, self.stormReturn, self.cassandraReturn, self.mongoReturn, self.userQueryReturn
 
     def filterData(self, df, m=False):
         '''
@@ -523,7 +535,7 @@ class AdpEngine:
             print "Getting data ..."
             checkpoint = str2Bool(self.checkpoint)
             queryd = queryParser(self.query)
-            systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn, cassandraReturn, mongoReturn = self.getData()
+            systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn, cassandraReturn, mongoReturn, userqueryReturn = self.getData()
             if not checkpoint:
                 if 'yarn' in queryd:
                     udata = self.dformat.toDF(os.path.join(self.dataDir, 'Final_Merge.csv'))
@@ -535,6 +547,8 @@ class AdpEngine:
                     udata = self.dformat.toDF(os.path.join(self.dataDir, 'Merged_Mongo.csv'))
                 elif 'spark' in queryd:
                     return "not yet implemented"  # todo
+                elif 'userquery' in queryd:
+                    udata = self.dformat.toDF(os.path.join(self.dataDir, 'query_response.csv'))
             else:
                 if 'yarn' in queryd:
                     udata = yarnReturn
@@ -546,6 +560,8 @@ class AdpEngine:
                     udata = mongoReturn
                 elif 'spark' in queryd:
                     return "not yet implemented"  # todo
+                elif 'userquery' in queryd:
+                    udata = userqueryReturn
             udata = self.filterData(udata) #todo check
             if self.type == 'clustering':
                 if self.method in self.allowedMethodsClustering:
@@ -571,6 +587,8 @@ class AdpEngine:
                             dataf = os.path.join(self.dataDir, 'Merged_Cassandra.csv')
                         elif 'mongodb' in queryd:
                             dataf = os.path.join(self.dataDir, 'Merged_Mongo.csv')
+                        elif 'userquery' in queryd:
+                            dataf = os.path.join(self.dataDir, 'query_response.csv')
                         data = dataf
                     if self.method == 'skm':
                         print "Method %s settings detected -> %s" % (self.method, str(self.methodSettings))
@@ -643,8 +661,36 @@ class AdpEngine:
                     print "Unknown method %s of type %s" %(self.method, self.type)
                     sys.exit(1)
             elif self.type == 'classification':
-                print "Not yet supported!"  # TODO
-                sys.exit(0)
+                # validratio=settings['validratio'], compare=True)
+                classdmon = cdmon.SciClassification(self.modelsDir, self.dataDir, self.checkpoint, self.export,
+                                                    training=self.trainingSet, validation=self.validationSet,
+                                                    validratio=self.validratio, compare=self.compare)
+                if self.method in self.allowefMethodsClassification:
+                    if self.trainingSet is None:
+                        logger.info('[%s] : [INFO] Started Training Set generation ... ',
+                                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+                        udata = classdmon.trainingDataGen(self.methodSettings, udata, onlyAno=self.anoOnly)
+
+                    if self.method == 'randomforest':
+                        logger.info('[%s] : [INFO] Initializaing RandomForest model creation ....',
+                                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+                        rfmodel = classdmon.randomForest(settings=self.methodSettings, data=udata, dropna=True)
+
+                    elif self.method == 'decisiontree':
+                        print "dt"
+                    elif self.method == 'sneural':
+                        print 'sneural'
+                    elif self.method == 'adaboost':
+                        print 'addaboost'
+                    elif self.method == 'naivebayes':
+                        print 'naivebayes'
+                    self.train = False
+                else:
+                    logger.error('[%s] : [ERROR] Unknown method %s of type %s ',
+                                 datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.method,
+                                 self.type)
+                    print "Unknown method %s of type %s" % (self.method, self.type)
+                    sys.exit(1)
             else:
                 logger.error('[%s] : [ERROR] Unknown type %s ',
                                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.type)
@@ -752,7 +798,7 @@ class AdpEngine:
             if self.type == 'clustering':
                 while True:
                     print "Collect data ..."
-                    systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn, cassandraReturn, mongoReturn = self.getData(detect=True)
+                    systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn, cassandraReturn, mongoReturn, userQueryReturn = self.getData(detect=True)
                     # if list(set(self.dformat.fmHead) - set(list(yarnReturn.columns.values))):
                     #     print "Mismatch between desired and loaded data"
                     #     sys.exit()
@@ -778,7 +824,13 @@ class AdpEngine:
                         else:
                             dataf = os.path.join(self.dataDir, 'Storm.csv')
                             data = dataf
-
+                    elif 'userquery' in queryd:
+                        userQueryReturn = self.filterData(userQueryReturn)
+                        if checkpoint:
+                            data = userQueryReturn
+                        else:
+                            dataf = os.path.join(self.dataDir, 'query_response.csv')
+                            data = dataf
                     if self.method in self.allowedMethodsClustering:
                         print "Detecting with selected method %s of type %s" % (self.method, self.type)
                         if os.path.isfile(os.path.join(self.modelsDir, self.modelName(self.method, self.load))):
@@ -841,7 +893,36 @@ class AdpEngine:
             threadTrain.join()
             threadDetect.join()
         except Exception as inst:
-            logger.error('[%s] : [ERROR] Exception %s with %s during point thread execution, halting',
+            logger.error('[%s] : [ERROR] Exception %s with %s during thread execution, halting',
+                           datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+            sys.exit(1)
+        return 0
+
+    def runProcess(self, engine):
+        proc = []
+        try:
+            pPoint = AdpPointProcess(engine, 'Point Proc')
+            pTrain = AdpTrainProcess(engine, 'Train Proc')
+            pDetect = AdpDetectProcess(engine, 'Detect Proc')
+
+            processPoint = pPoint.run()
+            proc.append(processPoint)
+            processTrain = pTrain.run()
+            proc.append(processTrain)
+            processDetect = pDetect.run()
+            proc.append(processDetect)
+
+
+            processPoint.start()
+            processTrain.start()
+            processDetect.start()
+
+            for p in proc:
+                p.join()
+                print '%s.exitcode = %s' % (p.name, p.exitcode)
+
+        except Exception as inst:
+            logger.error('[%s] : [ERROR] Exception %s with %s during process execution, halting',
                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
             sys.exit(1)
         return 0
@@ -1307,7 +1388,7 @@ class AdpEngine:
             lmongoGauge.append(self.dformat.dict2csv(gmongodbGauge, qmongodbGauge, mongodbGauge_file))
 
 
-    #Merge and rename by node system File
+        #Merge and rename by node system File
         df_MD_Count = self.dformat.chainMergeMongoDB(lmongoCounter)
         df_MD_Gauge = self.dformat.chainMergeMongoDB(lmongoGauge)
 
@@ -1322,6 +1403,73 @@ class AdpEngine:
         else:
             return df_MD
 
+    def getQuery(self, detect=False):
+        if not os.path.isfile(os.path.join(self.queryDir, 'query.json')):
+            logger.error('[%s] : [ERROR] No user defined query found in queries directory!',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+            print "No user defined query found in queries directory! Exiting ..."
+            sys.exit(1)
+        logger.info('[%s] : [INFO] Started User defined querying  ...',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        checkpoint = str2Bool(self.checkpoint)
+        query = self.qConstructor.sideQuery()
+        try:
+            # Query string
+            queryStr =  query['query']['filtered']['query']['query_string']['query']
+
+            # Query range
+            if detect:
+                query['query']['filtered']['filter']['bool']['must'][0]['range']['@timestamp']['gte'] = "now-%s" % self.interval
+                query['query']['filtered']['filter']['bool']['must'][0]['range']['@timestamp']['lte'] = "now"
+                logger.info('[%s] : [INFO] User defined query detect set with interval %s!',
+                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'),
+                            str(self.interval))
+            qfrom = query['query']['filtered']['filter']['bool']['must'][0]['range']['@timestamp']['gte']
+            qto = query['query']['filtered']['filter']['bool']['must'][0]['range']['@timestamp']['lte']
+
+            # Query Size
+            qSize = query['size']
+
+            # Query Aggs
+            if len(query['aggs'].values()) > 1:
+                logger.error('[%s] : [ERROR] Aggregation type unsupported, got length %s expected 1!',
+                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(len(query['aggs'].values())))
+                print "Aggregation type unsupported, got length %s expected 1!" % str(len(query['aggs'].values()))
+                sys.exit(1)
+            else:
+                qInterval = query['aggs'].values()[0]['date_histogram']['interval']
+                if detect:
+                    query['aggs'].values()[0]['date_histogram']['extended_bounds']['min'] = "now-%s" % self.interval
+                    query['aggs'].values()[0]['date_histogram']['extended_bounds']['max'] = "now"
+                qMin = query['aggs'].values()[0]['date_histogram']['extended_bounds']['min']
+                qMax = query['aggs'].values()[0]['date_histogram']['extended_bounds']['max']
+        except Exception as inst:
+            logger.error('[%s] : [ERROR] Unsupported query detected with %s and %s!',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+            print "Unsupported query detected! Exiting ..."
+            sys.exit(1)
+        logger.info('[%s] : [INFO] Query succesfully parsed; querystring -> %s, from-> %s, to-> %s, size-> %s, interval-> %s',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), queryStr, qfrom, qto, qSize, qInterval)
+        print "User Query Succesfully parsed: "
+        print "querystring -> %s" % queryStr
+        print "from-> %s" % qfrom
+        print "to-> %s" % qto
+        print "size-> %s" % qSize
+        print "interval-> %s" % qInterval
+        response_file = self.qConstructor.sideQueryString()
+        guserQuery = self.dmonConnector.aggQuery(query)
+
+        if not checkpoint:
+            self.dformat.dict2csv(guserQuery, query, response_file)
+            returnUQ = 0
+        else:
+            df_UQ = self.dformat.dict2csv(guserQuery, query, response_file, df=checkpoint)
+            # df_NN.set_index('key', inplace=True)
+            returnUQ = df_UQ
+        print "Querying  Name Node metrics complete"
+        logger.info('[%s] : [INFO] Querying  Name Node metrics complete',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        return returnUQ
 
     def printTest(self):
         print "Endpoint -> %s" %self.esendpoint

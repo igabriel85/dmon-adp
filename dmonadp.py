@@ -34,6 +34,7 @@ import tempfile
 def main(argv):
     dataDir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
     modelsDir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
+    queryDir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'queries')
 
     settings = {
         "esendpoint": None,
@@ -64,7 +65,12 @@ def main(argv):
         "checkpoint": None,
         "delay": None,
         "interval": None,
-        "resetindex": None
+        "resetindex": None,
+        "training":None,
+        "validation":None,
+        "validratio":0.0,
+        "compare": False,
+        "anomalyOnly": False,
     }
 
     # Only for testing
@@ -116,6 +122,7 @@ def main(argv):
     print "Starting DICE Anomaly detection framework"
     print "Initializing ..."
     print "Trying to read configuration file ..."
+    print queryDir
 
     if settings["file"] is None:
         file_conf = 'dmonadp.ini'
@@ -502,7 +509,7 @@ def main(argv):
             settings["resetindex"] = False
     else:
         print "Reset index set to %s" % settings["resetindex"]
-    logger.info('[%s] : [INFO] Reset index set to %s"',
+    logger.info('[%s] : [INFO] Reset index set to %s',
                 datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['resetindex'])
 
     try:
@@ -512,6 +519,49 @@ def main(argv):
         print "DMon Port is set to default %s" % str(5001)
     logger.info('[%s] : [INFO] DMon Port is set to %s"',
                 datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(settings['dmonPort']))
+
+    try:
+        print "Classification Training set is %s" % readCnf['Detect']['training']
+        settings['training'] = readCnf['Detect']['training']
+    except:
+        print "Classification training set is default"
+    logger.info('[%s] : [INFO] Classification Training set is %s',
+                datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(settings['training']))
+
+    try:
+        print "Classification Validation set is %s" % readCnf['Detect']['validation']
+        settings['validation'] = readCnf['Detect']['validation']
+    except:
+        print "Classification Validation set is default"
+    logger.info('[%s] : [INFO] Classification Validation set is %s',
+                datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(settings['validation']))
+
+    try:
+        print "Classification validation ratio is set to %d" % int(readCnf['Detect']['validratio'])
+        if float(readCnf['Detect']['validratio']) > 1.0:
+            print "Validation ratio is out of range, must be between 1.0 and 0.1"
+            settings['validratio'] = 0.0
+        settings['validratio'] = float(readCnf['Detect']['validratio'])
+    except:
+        print "Classification Validation ratio is default"
+    logger.info('[%s] : [INFO] Classification Validation ratio is %s',
+                datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(settings['validratio']))
+
+    try:
+        print "Classification comparison is set to %s" % readCnf['Detect']['compare']
+        settings['compare'] = readCnf['Detect']['compare']
+    except:
+        print "Classification comarison is default"
+    logger.info('[%s] : [INFO] Classification comparison is %s',
+                datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['compare'])
+
+    try:
+        print "Classification data generation using only anomalies set to %s" % readCnf['Detect']['anomalyOnly']
+        settings['anomalyOnly'] = readCnf['Detect']['anomalyOnly']
+    except:
+        print "Classification data generation using only anomalies set to False"
+    logger.info('[%s] : [INFO] Classification data generation using only anomalies set to %s',
+                datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(settings['anomalyOnly']))
 
     #if settings["esendpoint"] == None:
 
@@ -526,12 +576,13 @@ def main(argv):
     # settings = {'load': 'test1', 'qsize': '0', 'dfilter': None, 'export': 'test1', 'file': None, 'rfilter': None, 'query': 'cassandra', 'index': 'lscassandra', 'detect': 'false', 'from': '1481569200000', 'checkpoint': 'false', 'to': '1481580000000', 'sload': 'shortterm:gd:2.0;midterm:ld:0.1;longterm:gd:1.0', 'nodes': 0, 'type': 'clustering', 'method': 'isoforest', 'snetwork': 'tx:gd:34344;rx:ld:323434', 'resetindex': 'false', 'interval': '15m', 'train': 'true', 'esInstanceEndpoint': 9200, 'heap': '512m', 'validate': False, 'qinterval': '20s', 'dmonPort': '5001', 'esendpoint': '85.120.206.27', 'smemory': 'cached:gd:231313;buffered:ld:312123;used:ld:12313;free:gd:23123', 'delay': '2m', 'MethodSettings': {'max_samples': '100', 'n_jobs': '1', 'verbose': '0', 'bootstrap': 'False', 'n_estimators': '100', 'random_state': 'None', 'contamination': '0.01', 'max_features': '1.0'}, 'cfilter': None}
     # End testing settings
 
-    engine = dmonadpengine.AdpEngine(settings, dataDir=dataDir, modelsDir=modelsDir)
+    engine = dmonadpengine.AdpEngine(settings, dataDir=dataDir, modelsDir=modelsDir, queryDir=queryDir)
     #engine.printTest()
     engine.initConnector()
     #
     #
-    engine.run(engine)
+    # engine.run(engine)
+    engine.runProcess(engine)
     # systemReturn, yarnReturn, reducemetrics, mapmetrics, sparkReturn, stormReturn, cassandraReturn = engine.getData()
     # dformat = DataFormatter(dataDir)
     # test = dweka(dataDir, modelsDir)

@@ -1,9 +1,12 @@
 from addict import Dict
+import os
+import json
 
 
 class QueryConstructor():
-    def __init__(self):
+    def __init__(self, queryDir):
         self.author = 'Constructor for dmon-adp ES connector querys'
+        self.queryDir = queryDir
         # self.systemLoadString = "collectd_type:\"load\" AND host:\"dice.cdh.master\""
 
     def loadString(self, host):
@@ -139,6 +142,10 @@ class QueryConstructor():
         qstring = "plugin:mongo AND collectd_type:gauge AND host:\"%s\"" % host
         file = "MongoDB_Gauge_%s.csv" % host
         return qstring, file
+
+    def sideQueryString(self):
+        file = "query_response.csv"
+        return file
 
     def loadAverage(self):  # TODO
         return "Average load across all nodes!"
@@ -876,5 +883,15 @@ class QueryConstructor():
 
     def sparkQuery(self):
         return "Spark metrics query"
+
+    def sideQuery(self):
+        queryFile = os.path.join(self.queryDir, 'query.json')
+        with open(queryFile) as query:
+            squeryd = json.load(query)
+        return squeryd
+
+
+
+
 
 
