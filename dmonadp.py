@@ -68,9 +68,9 @@ def main(argv):
         "resetindex": None,
         "training":None,
         "validation":None,
-        "validratio":0,
+        "validratio":0.0,
         "compare": False,
-        "target": None
+        "anomalyOnly": False,
     }
 
     # Only for testing
@@ -554,6 +554,15 @@ def main(argv):
         print "Classification comarison is default"
     logger.info('[%s] : [INFO] Classification comparison is %s',
                 datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['compare'])
+
+    try:
+        print "Classification data generation using only anomalies set to %s" % readCnf['Detect']['anomalyOnly']
+        settings['anomalyOnly'] = readCnf['Detect']['anomalyOnly']
+    except:
+        print "Classification data generation using only anomalies set to False"
+    logger.info('[%s] : [INFO] Classification data generation using only anomalies set to %s',
+                datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(settings['anomalyOnly']))
+
     #if settings["esendpoint"] == None:
 
     #dmonC = Connector('85.120.206.27')

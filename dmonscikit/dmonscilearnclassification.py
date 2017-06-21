@@ -19,12 +19,16 @@ import glob
 from util import ut2hum
 
 
-
 class SciClassification:
-    def __init__(self, modelDir, dataDir, settings):
+    def __init__(self, modelDir, dataDir, checkpoint, export, training, validation, validratio, compare):
         self.modelDir = modelDir
         self.dataDir = dataDir
-        self.settings = settings
+        self.checkpoint = checkpoint
+        self.export = export
+        self.training = training
+        self.validation = validation
+        self.validratio = validratio
+        self.compare = compare
 
     def detect(self, method, model, data):
         smodel = self.__loadClusterModel(method, model)
@@ -93,7 +97,7 @@ class SciClassification:
         return True
 
     def adaBoost(self, settings, data=None, dropna=True):
-        df = self.__loadData(settings, data, dropna)
+        df = self.__loadData(data, dropna)
         features = df.columns[:-1]
         X = df[features]
         y = df.iloc[:, -1].values
@@ -103,7 +107,7 @@ class SciClassification:
         print kfold
         model = AdaBoostClassifier(n_estimators=num_trees, random_state=seed)
         results = model_selection.cross_val_score(model, X, y, cv=kfold)
-        model.fit(X,y)
+        model.fit(X, y)
         print results.mean()
         print model.score(X, y)
         return True
@@ -118,27 +122,50 @@ class SciClassification:
                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(settings))
             sys.exit(1)
 
-        try:
-            mname = settings['export']
-        except:
-            mname = 'default'
+        if settings['random_state'] == 'None':
+            settings['random_state'] = None
+        else:
+            settings['random_state'] = int(settings['random_state'])
 
-        df = self.__loadData(settings, data, dropna)
+        if settings['max_depth'] == 'None':
+            max_depth = None
+        else:
+            max_depth = int(settings['max_depth'])
+
+        if settings['max_features'] == 'auto':
+            max_features = settings['max_features']
+        else:
+            max_features = int(settings['max_features'])
+
+        dtallowedSettings = ["criterion", "splitter", "max_features", "max_depth",
+                             "min_weight_faction_leaf", "random_state"]
+        for k, v in settings.iteritems():
+            if k in dtallowedSettings:
+                logger.info('[%s] : [INFO] DecisionTree %s set to %s',
+                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), k, v)
+                print "DecisionTree %s set to %s" % (k, v)
+
+        if not isinstance(self.export, str):
+            mname = 'default'
+        else:
+            mname = self.export
+
+        df = self.__loadData(data, dropna)
         features = df.columns[:-1]
         X = df[features]
         y = df.iloc[:, -1].values
 
         # dt = DecisionTreeClassifier(min_samples_split=20, random_state=99)
         dt = DecisionTreeClassifier(criterion=settings["criterion"], splitter=settings["splitter"],
-                                    max_features=settings["max_features"], max_depth=settings["max_depth"],
-                                    min_samples_split=settings["min_sample_split"],
-                                    min_weight_fraction_leaf=settings["min_weight_faction_leaf"], random_state=settings["random_state"])
-        if settings['validratio']:
-            trainSize = 1.0 - settings['validratio']
-            print "Random forest training to validation ratio set to: %s" % str(settings['validratio'])
+                                    max_features=max_features, max_depth=max_depth,
+                                    min_samples_split=float(settings["min_sample_split"]),
+                                    min_weight_fraction_leaf=float(settings["min_weight_faction_leaf"]), random_state=settings["random_state"])
+        if self.validratio:
+            trainSize = 1.0 - self.validratio
+            print "Random forest training to validation ratio set to: %s" % str(self.validratio)
             logger.info('[%s] : [INFO] Random forest training to validation ratio set to: %s',
-                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(settings['validratio']))
-            d_train, d_test, f_train, f_test = self.__dataSplit(X, y, testSize=settings['validratio'], trainSize=trainSize)
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(self.validratio))
+            d_train, d_test, f_train, f_test = self.__dataSplit(X, y, testSize=self.validratio, trainSize=trainSize)
             dt.fit(d_train, f_train)
             predict = dt.predict(d_train)
             print "Prediction for Decision Tree Training:"
@@ -187,14 +214,20 @@ class SciClassification:
             score = dt.score(X, y)
             print "Decision Tree Training Score: %s" % str(score)
 
-            print "Feature importance Decision Tree Training: "
-            print list(zip(X, dt.feature_importances_))
-            if settings['validation'] is None:
+            fimp = list(zip(X, dt.feature_importances_))
+            print "Feature importance Random Forest Training: "
+            print fimp
+            dfimp = dict(fimp)
+            dfimp = pd.DataFrame(dfimp.items(), columns=['Metric', 'Importance'])
+            sdfimp = dfimp.sort('Importance', ascending=False)
+            dfimpCsv = 'Feature_Importance_%s.csv' % mname
+            sdfimp.to_csv(os.path.join(self.modelDir, dfimpCsv))
+            if self.validation is None:
                 logger.info('[%s] : [INFO] Validation is set to None',
                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
                 # return True
             else:
-                vfile = os.path.join(self.dataDir, settings['validation'])
+                vfile = os.path.join(self.dataDir, self.validation)
                 logger.info('[%s] : [INFO] Validation data file is set to %s',
                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(vfile))
                 if not os.path.isfile(vfile):
@@ -226,31 +259,54 @@ class SciClassification:
                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(settings))
             sys.exit(1)
 
-        try:
-            mname = settings['export']
-        except:
+        if settings['random_state'] == 'None':
+            settings['random_state'] = None
+        else:
+            settings['random_state'] = int(settings['random_state'])
+
+        if settings['max_depth'] == 'None':
+            max_depth = None
+        else:
+            max_depth = int(settings['max_depth'])
+
+        if isinstance(settings['bootstrap'], str):
+            settings['iso_bootstrap'] = str2Bool(settings['bootstrap'])
+
+        rfallowedSettings = ["n_estimators", "criterion", "max_features", "max_depth", "min_sample_split",
+                             "min_sample_leaf", "min_weight_faction_leaf", "min_impurity_split", "bootstrap", "n_jobs",
+                             "random_state", "verbose"]
+        for k, v in settings.iteritems():
+            if k in rfallowedSettings:
+                logger.info('[%s] : [INFO] RandomForest %s set to %s',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), k, v)
+                print "RandomForest %s set to %s" % (k, v)
+
+        if not isinstance(self.export, str):
             mname = 'default'
-        df = self.__loadData(settings, data, dropna)
+        else:
+            mname = self.export
+
+        df = self.__loadData(data, dropna)
         features = df.columns[:-1]
         X = df[features]
         y = df.iloc[:, -1].values
 
         # clf = RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1, n_jobs=2)
-        clf = RandomForestClassifier(n_estimators=settings["n_estimators"], criterion=settings["criterion"],
-                                     max_features=settings["max_features"], max_depth=settings["max_depth"],
-                                     min_samples_split=settings["min_sample_split"],
-                                     min_samples_leaf=settings["min_sample_leaf"],
-                                     min_weight_fraction_leaf=settings["min_weight_faction_leaf"],
+        clf = RandomForestClassifier(n_estimators=int(settings["n_estimators"]), criterion=settings["criterion"],
+                                     max_features=settings["max_features"], max_depth=max_depth,
+                                     min_samples_split=int(settings["min_sample_split"]),
+                                     min_samples_leaf=int(settings["min_sample_leaf"]),
+                                     min_weight_fraction_leaf=int(settings["min_weight_faction_leaf"]),
                                      bootstrap=settings["bootstrap"],
-                                     n_jobs=settings["n_jobs"],
-                                     random_state=settings["random_state"], verbose=settings["verbose"])
+                                     n_jobs=int(settings["n_jobs"]),
+                                     random_state=settings["random_state"], verbose=int(settings["verbose"]))
 
-        if settings['validratio']:
-            trainSize = 1.0 - settings['validratio']
-            print "Random forest training to validation ratio set to: %s" % str(settings['validratio'])
+        if self.validratio:
+            trainSize = 1.0 - self.validratio
+            print "Random forest training to validation ratio set to: %s" % str(self.validratio)
             logger.info('[%s] : [INFO] Random forest training to validation ratio set to: %s',
-                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(settings['validratio']))
-            d_train, d_test, f_train, f_test = self.__dataSplit(X, y, testSize=settings['validratio'], trainSize=trainSize)
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(self.validratio))
+            d_train, d_test, f_train, f_test = self.__dataSplit(X, y, testSize=self.validratio, trainSize=trainSize)
             clf.fit(d_train, f_train)
             predict = clf.predict(d_train)
             print "Prediction for Random Forest Training:"
@@ -299,9 +355,15 @@ class SciClassification:
             score = clf.score(X, y)
             print "Random Forest Training Score: %s" % str(score)
 
+            fimp = list(zip(X, clf.feature_importances_))
             print "Feature importance Random Forest Training: "
-            print list(zip(X, clf.feature_importances_))
-            if settings['validation'] is None:
+            print fimp
+            dfimp = dict(fimp)
+            dfimp = pd.DataFrame(dfimp.items(), columns=['Metric', 'Importance'])
+            sdfimp = dfimp.sort('Importance', ascending=False)
+            dfimpCsv = 'Feature_Importance_%s.csv' % mname
+            sdfimp.to_csv(os.path.join(self.modelDir, dfimpCsv))
+            if self.validation is None:
                 logger.info('[%s] : [INFO] Validation is set to None',
                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
                 # return True
@@ -331,46 +393,50 @@ class SciClassification:
         self.__serializemodel(clf, 'RandomForest', mname)
         return clf
 
-    def trainingDataGen(self, settings, data=None, dropna=True):
+    def trainingDataGen(self, settings, data=None, dropna=True, onlyAno=True):
         print "Starting training data generation ...."
         logger.info('[%s] : [INFO] Starting training data generation ...',
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
-        df = self.__loadData(settings, data, dropna)
+        df = self.__loadData(data, dropna)
+        if df.index.name is None:
+            df.set_index('key', inplace=True)
+        logger.info('[%s] : [INFO] Input Dataframe shape: %s',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(df.shape))
 
-        if 'n_estimators' not in settings.keys():
-            settings['n_estimators'] = 100
-        if 'max_samples' not in settings.keys():
-            settings['max_samples'] = 'auto'
-        if 'contamination' not in settings.keys():
-            settings['contamination'] = 0.1
-        if 'bootstrap' not in settings.keys():
-            settings['bootstrap'] = True
-        if 'max_features' not in settings.keys():
-            settings['max_features'] = 1.0
-        if 'n_jobs' not in settings.keys():
-            settings['n_jobs'] = 1
-        if 'random_state' not in settings.keys():
-            settings['random_state'] = None
-        if 'verbose' not in settings.keys():
-            settings['verbose'] = 0
+        if 'iso_n_estimators' not in settings.keys():
+            settings['iso_n_estimators'] = 100
+        if 'iso_max_samples' not in settings.keys():
+            settings['iso_max_samples'] = 'auto'
+        if 'iso_contamination' not in settings.keys():
+            settings['iso_contamination'] = 0.1
+        if 'iso_bootstrap' not in settings.keys():
+            settings['iso_bootstrap'] = True
+        if 'iso_max_features' not in settings.keys():
+            settings['iso_max_features'] = 1.0
+        if 'iso_n_jobs' not in settings.keys():
+            settings['iso_n_jobs'] = 1
+        if 'iso_random_state' not in settings.keys():
+            settings['iso_random_state'] = None
+        if 'iso_verbose' not in settings.keys():
+            settings['iso_verbose'] = 0
 
-        if settings['random_state'] == 'None':
-            settings['random_state'] = None
+        if settings['iso_random_state'] == 'None':
+            settings['iso_random_state'] = None
 
-        if isinstance(settings['bootstrap'], str):
-            settings['bootstrap'] = str2Bool(settings['bootstrap'])
+        if isinstance(settings['iso_bootstrap'], str):
+            settings['iso_bootstrap'] = str2Bool(settings['bootstrap'])
 
-        if isinstance(settings['verbose'], str):
-            settings['verbose'] = str2Bool(settings['verbose'])
+        if isinstance(settings['iso_verbose'], str):
+            settings['iso_verbose'] = str2Bool(settings['verbose'])
 
-        if settings['max_samples'] != 'auto':
-            settings['max_samples'] = int(settings['max_samples'])
+        if settings['iso_max_samples'] != 'auto':
+            settings['iso_max_samples'] = int(settings['max_samples'])
 
-        if isinstance(settings['max_features'], str):
-            settings["max_features"] = 1.0
+        if isinstance(settings['iso_max_features'], str):
+            settings["iso_max_features"] = 1.0
         # print type(settings['max_samples'])
-        allowedIso = ['n_estimators', 'max_samples', 'contamination', 'bootstrap', 'max_features', 'n_jobs',
-                   'random_state', 'verbose']
+        allowedIso = ['iso_n_estimators', 'iso_max_samples', 'iso_contamination', 'iso_bootstrap', 'iso_max_features', 'iso_n_jobs',
+                   'iso_random_state', 'iso_verbose']
         for k, v in settings.iteritems():
             if k in allowedIso:
                 logger.info('[%s] : [INFO] IsolationForest %s set to %s',
@@ -378,8 +444,8 @@ class SciClassification:
                 print "IsolationForest %s set to %s" % (k, v)
 
         try:
-            clf = IsolationForest(n_estimators=int(settings['n_estimators']), max_samples=settings['max_samples'], contamination=float(settings['contamination']), bootstrap=settings['bootstrap'],
-                        max_features=float(settings['max_features']), n_jobs=int(settings['n_jobs']), random_state=settings['random_state'], verbose=settings['verbose'])
+            clf = IsolationForest(n_estimators=int(settings['iso_n_estimators']), max_samples=settings['iso_max_samples'], contamination=float(settings['iso_contamination']), bootstrap=settings['bootstrap'],
+                        max_features=float(settings['iso_max_features']), n_jobs=int(settings['iso_n_jobs']), random_state=settings['iso_random_state'], verbose=settings['iso_verbose'])
         except Exception as inst:
             logger.error('[%s] : [ERROR] Cannot instanciate isolation forest with %s and %s',
                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
@@ -400,13 +466,18 @@ class SciClassification:
         logger.info('[%s] : [INFO] Number of anomalies detected: %s',
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(len(anomalies)))
 
-        # Generate anomalydataframe
+        # Generate anomalydataframe/ anomalies only
         slist = []
         for an in anomalies:
             slist.append(df.iloc[an[0]])
         anomalyFrame = pd.DataFrame(slist)
-        anomalyFrame.set_index('key', inplace=True)
-        if settings["checkpoint"]:
+        # if df.index.name.index is None:
+        #     anomalyFrame.set_index('key', inplace=True)
+
+        logger.info('[%s] : [INFO] Anomaly Dataframe shape: %s',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(anomalyFrame.shape))
+
+        if self.checkpoint:
             logger.info('[%s] : [INFO] Anomalies checkpointed.',
                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(len(anomalies)))
             anomalyFrame.to_csv(os.path.join(self.dataDir, 'AnomalyFrame.csv'))
@@ -415,22 +486,22 @@ class SciClassification:
         X = StandardScaler().fit_transform(anomalyFrame)
 
         print "Started Anomaly clustering ..."
-        if 'eps' not in settings.keys():
-            settings['eps'] = 0.9
-        if 'min_samples' not in settings.keys():
-            settings['min_samples'] = 40
-        if 'metric' not in settings.keys():
-            settings['metric'] = 'euclidean'
-        if 'algorithm' not in settings.keys():
-            settings['algorithm'] = 'auto'
-        if 'leaf_size' not in settings.keys():
-            settings['leaf_size'] = 30
-        if 'p' not in settings.keys():
-            settings['p'] = 0.2
-        if 'n_jobs' not in settings.keys():
-            settings['n_jobs'] = 1
+        if 'db_eps' not in settings.keys():
+            settings['db_eps'] = 0.9
+        if 'db_min_samples' not in settings.keys():
+            settings['db_min_samples'] = 40
+        if 'db_metric' not in settings.keys():
+            settings['db_metric'] = 'euclidean'
+        if 'db_algorithm' not in settings.keys():
+            settings['db_algorithm'] = 'auto'
+        if 'db_leaf_size' not in settings.keys():
+            settings['db_leaf_size'] = 30
+        if 'db_p' not in settings.keys():
+            settings['db_p'] = 0.2
+        if 'db_n_jobs' not in settings.keys():
+            settings['db_n_jobs'] = 1
 
-        allowedDB = ['eps', 'min_samples', 'metric', 'algorithm', 'leaf_size', 'p', 'n_jobs']
+        allowedDB = ['db_eps', 'db_min_samples', 'db_metric', 'db_algorithm', 'db_leaf_size', 'db_p', 'db_n_jobs']
         for k, v in settings.iteritems():
             if k in allowedDB:
                 logger.info('[%s] : [INFO] SDBSCAN %s set to %s',
@@ -439,9 +510,9 @@ class SciClassification:
 
         # db = DBSCAN(eps=0.9, min_samples=40).fit(X)
         try:
-            db = DBSCAN(eps=float(settings['eps']), min_samples=int(settings['min_samples']), metric=settings['metric'],
-                        algorithm=settings['algorithm'], leaf_size=int(settings['leaf_size']), p=float(settings['p']),
-                        n_jobs=int(settings['n_jobs'])).fit(X)
+            db = DBSCAN(eps=float(settings['db_eps']), min_samples=int(settings['db_min_samples']), metric=settings['db_metric'],
+                        algorithm=settings['db_algorithm'], leaf_size=int(settings['db_leaf_size']), p=float(settings['db_p']),
+                        n_jobs=int(settings['db_n_jobs'])).fit(X)
         except Exception as inst:
             logger.error('[%s] : [ERROR] Cannot instanciate sDBSCAN with %s and %s',
                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
@@ -464,17 +535,44 @@ class SciClassification:
         print "Adding labels to data ..."
         anomalyFrame['Target'] = labels
 
-        # Remove noise from data
-        print "Removing noise from data ..."
-        data_labeled = anomalyFrame[anomalyFrame["Target"] != -1]
-        if settings["checkpoint"]:
-            data_labeled.to_csv(os.path.join(self.dataDir, 'AnomalyFrame_Labeled.csv'))
-        print "Finished training data generation"
-        return data_labeled
+        if onlyAno:
+            # Remove noise from data
+            print "Removing noise from data ..."
+            data_labeled = anomalyFrame[anomalyFrame["Target"] != -1]
+            if self.checkpoint:
+                data_labeled.to_csv(os.path.join(self.dataDir, 'AnomalyFrame_Labeled.csv'))
+            print "Finished training data generation"
+            return data_labeled
+        else:
+            bval = np.amax(labels)
+            print bval
+            # replace noise with new label
+            labels[labels == -1] = bval + 1
+            # add one to all elements in array so that 0 is free for normal events
+            nlabels = labels + 1
+            anomalyFrame['Target2'] = nlabels
+            # print data_labeled[['Target', 'Target2']]
+            # initialize empty column
+            df['TargetF'] = np.nan
 
-    def __loadData(self, settings, data=None, dropna=True):
-        if settings["checkpoint"]:
-            dfile = os.path.join(self.dataDir, settings['training'])
+            # add clustered anomalies to original dataframe
+            for k in anomalyFrame.index.values:
+                df.set_value(k, 'TargetF', anomalyFrame.loc[k, 'Target2'])
+            # Mark all normal instances as 0
+            df = df.fillna(0)
+            if df.isnull().values.any():
+                logger.error('[%s] : [ERROR] Found null values in anomaly dataframe after processing!',
+                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+                print 'Found null values in anomaly dataframe after processing!'
+                sys.exit(1)
+            if self.checkpoint:
+                df.to_csv(os.path.join(self.dataDir, 'AnomalyFrame_Labeled_Complete.csv'))
+            print "Finished training data generation"
+            return df
+
+    def __loadData(self, data=None, dropna=True):
+        if not self.checkpoint:
+            dfile = os.path.join(self.dataDir, self.training)
             logger.info('[%s] : [INFO] Data file is set to %s', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(dfile))
             if not os.path.isfile(dfile):
                 print "Training file %s not found" % dfile
@@ -484,6 +582,11 @@ class SciClassification:
             else:
                 df = pd.read_csv(dfile)
         else:
+            if not isinstance(data, pd.core.frame.DataFrame):
+                print "Data is of type %s and not dataframe, exiting!" % type(data)
+                logger.error('[%s] : [ERROR] Data is of type %s and not dataframe, exiting!',
+                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(type(data)))
+                sys.exit(1)
             df = data
         if dropna:
             df = df.dropna()
@@ -520,8 +623,9 @@ class SciClassification:
         pickle.dump(model, open(fname, "wb"))
         print 'Saved %s model at %s' % (method, fpath)
 
-    def __normalize(self):
-        return True
+    def __normalize(self, data):
+        normalized_data = StandardScaler().fit_transform(data)
+        return normalized_data
 
     def __dataSplit(self, X, y, trainSize=None, testSize=None):
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=testSize, train_size=trainSize)

@@ -1,5 +1,6 @@
 from dmonconnector import *
 from dmonpoint import *
+from dmonscikit import dmonscilearnclassification
 from util import queryParser, nodesParse, str2Bool, cfilterparse, rfilterparse, pointThraesholds, parseDelay, parseMethodSettings, ut2hum
 from threadRun import AdpDetectThread, AdpPointThread, AdpTrainThread
 from multiprocRun import AdpDetectProcess, AdpPointProcess, AdpTrainProcess
@@ -7,6 +8,7 @@ from dmonweka import dweka
 from time import sleep
 import tempfile
 from dmonscikit import dmonscilearncluster as sdmon
+from dmonscikit import dmonscilearnclassification as cdmon
 
 
 class AdpEngine:
@@ -34,13 +36,18 @@ class AdpEngine:
         self.snetwork = settingsDict['snetwork']
         self.methodSettings = settingsDict['MethodSettings']
         self.resetIndex = settingsDict['resetindex']
+        self.trainingSet = settingsDict['training']
+        self.validationSet = settingsDict['validation']
+        self.anoOnly = settingsDict['anomalyOnly']
+        self.validratio = settingsDict['validratio']
+        self.compare = settingsDict['compare']
         self.dataDir = dataDir
         self.modelsDir = modelsDir
         self.queryDir = queryDir
         self.anomalyIndex = "anomalies"
         self.regnodeList = []
         self.allowedMethodsClustering = ['skm', 'em', 'dbscan', 'sdbscan', 'isoforest']
-        self.allowefMethodsClassification = []  # TODO
+        self.allowefMethodsClassification = ['randomforest', 'decisiontree', 'sneural', 'adaboost', 'naivebayes']  # TODO
         self.heap = settingsDict['heap']
         self.dmonConnector = Connector(self.esendpoint, dmonPort=self.dmonPort, index=self.index)
         self.qConstructor = QueryConstructor(self.queryDir)
@@ -654,8 +661,36 @@ class AdpEngine:
                     print "Unknown method %s of type %s" %(self.method, self.type)
                     sys.exit(1)
             elif self.type == 'classification':
-                print "Not yet supported!"  # TODO
-                sys.exit(0)
+                # validratio=settings['validratio'], compare=True)
+                classdmon = cdmon.SciClassification(self.modelsDir, self.dataDir, self.checkpoint, self.export,
+                                                    training=self.trainingSet, validation=self.validationSet,
+                                                    validratio=self.validratio, compare=self.compare)
+                if self.method in self.allowefMethodsClassification:
+                    if self.trainingSet is None:
+                        logger.info('[%s] : [INFO] Started Training Set generation ... ',
+                                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+                        udata = classdmon.trainingDataGen(self.methodSettings, udata, onlyAno=self.anoOnly)
+
+                    if self.method == 'randomforest':
+                        logger.info('[%s] : [INFO] Initializaing RandomForest model creation ....',
+                                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+                        rfmodel = classdmon.randomForest(settings=self.methodSettings, data=udata, dropna=True)
+
+                    elif self.method == 'decisiontree':
+                        print "dt"
+                    elif self.method == 'sneural':
+                        print 'sneural'
+                    elif self.method == 'adaboost':
+                        print 'addaboost'
+                    elif self.method == 'naivebayes':
+                        print 'naivebayes'
+                    self.train = False
+                else:
+                    logger.error('[%s] : [ERROR] Unknown method %s of type %s ',
+                                 datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.method,
+                                 self.type)
+                    print "Unknown method %s of type %s" % (self.method, self.type)
+                    sys.exit(1)
             else:
                 logger.error('[%s] : [ERROR] Unknown type %s ',
                                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.type)
@@ -850,11 +885,11 @@ class AdpEngine:
             threadTrain = AdpTrainThread(engine, 'Train')
             threadDetect = AdpDetectThread(engine, 'Detect')
 
-            # threadPoint.start()
+            threadPoint.start()
             threadTrain.start()
             threadDetect.start()
 
-            # threadPoint.join()
+            threadPoint.join()
             threadTrain.join()
             threadDetect.join()
         except Exception as inst:
