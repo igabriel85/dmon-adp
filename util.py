@@ -80,6 +80,8 @@ def queryParser(query):
                 type['mongodb'] = 0
         if r.split(':')[0] == 'userquery':
             type['userquery'] = 0
+        if r.split(':')[0] == 'cep':
+            type['cep'] = 0
     return type
 
 

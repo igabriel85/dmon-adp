@@ -1,6 +1,6 @@
 from pyQueryConstructor import *
 
-
+qdir = "qdire"
 qstring = "serviceType:\"yarn\" AND hostname:\"dice.cdh.slave1\""
 qString0 = "serviceType:\"yarn\" AND serviceMetrics:\"NodeManagerMetrics\" AND hostname:\"dice.cdh.slave1\"" #for yarn metrics
 wildCard = True
@@ -11,7 +11,7 @@ qsize = 0
 qinterval = "1s"
 qmin_doc_count = 1
 
-qConstructor = QueryConstructor()
+qConstructor = QueryConstructor(qdir)
 test = qConstructor.yarnNodeManager(qstring, qgte, qlte, qsize, qinterval, wildCard, qtformat,
                                                  qmin_doc_count)
 
@@ -2695,3 +2695,178 @@ bolts = 2
 spouts = 1
 test16 = qConstructor.stormQuery(qstring15, qgte, qlte, qsize, qinterval, bolts, spouts, wildCard, qtformat, 0)
 print test16
+
+cassandraQ = {
+  "size": 0,
+  "query": {
+    "filtered": {
+      "query": {
+        "query_string": {
+          "analyze_wildcard": True,
+          "query": "plugin:\"GenericJMX\""
+        }
+      },
+      "filter": {
+        "bool": {
+          "must": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": 1481030996803,
+                  "lte": 1481635796803,
+                  "format": "epoch_millis"
+                }
+              }
+            }
+          ],
+          "must_not": []
+        }
+      }
+    }
+  },
+  "aggs": {
+    "2": {
+      "date_histogram": {
+        "field": "@timestamp",
+        "interval": "1h",
+        "time_zone": "Europe/Helsinki",
+        "min_doc_count": 1,
+        "extended_bounds": {
+          "min": 1475842980000,
+          "max": 1481635796803
+        }
+      },
+      "aggs": {
+        "3": {
+          "terms": {
+            "field": "type_instance",
+            "size": 1000,
+            "order": {
+              "1": "desc"
+            }
+          },
+          "aggs": {
+            "1": {
+              "avg": {
+                "field": "value"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+
+cepQ = {
+  "highlight": {
+    "pre_tags": [
+      "@kibana-highlighted-field@"
+    ],
+    "post_tags": [
+      "@/kibana-highlighted-field@"
+    ],
+    "fields": {
+      "*": {}
+    },
+    "require_field_match": False,
+    "fragment_size": 2147483647
+  },
+  "query": {
+    "filtered": {
+      "query": {
+        "query_string": {
+          "query": "type:cep-posidonia AND DComp:DMON",
+          "analyze_wildcard": True
+        }
+      },
+      "filter": {
+        "bool": {
+          "must": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": 1498057785356,
+                  "lte": 1498144185356,
+                  "format": "epoch_millis"
+                }
+              }
+            }
+          ],
+          "must_not": []
+        }
+      }
+    }
+  },
+  "size": 500,
+  "sort": [
+    {
+      "@timestamp": {
+        "order": "desc",
+        "unmapped_type": "boolean"
+      }
+    }
+  ],
+  "aggs": {
+    "2": {
+      "date_histogram": {
+        "field": "@timestamp",
+        "interval": "30s",
+        "time_zone": "Europe/Helsinki",
+        "min_doc_count": 0,
+        "extended_bounds": {
+          "min": 1498057785356,
+          "max": 1498144185356
+        }
+      }
+    }
+  },
+  "fields": [
+    "*",
+    "_source"
+  ],
+  "script_fields": {},
+  "fielddata_fields": [
+    "@timestamp"
+  ]
+}
+
+qstring17 = "type:cep-posidonia AND DComp:DMON"
+qgte = 1498057785356
+qlte = 1498144185356
+qsize = 500
+qinterval ="30s"
+test17 = qConstructor.cepQuery(qstring=qstring17, qgte=qgte, qlte=qlte, qsize=qsize, qinterval=qinterval, qmin_doc_count=0)
+
+print "Gen->%s" % test17
+print "Org->%s" % cepQ
+if test17 != cepQ:
+    print "Failed Test 17"
+    print "+" * 50
+    print "Gen-q->%s" % test17['query']
+    print "Org-q->%s" % cepQ['query']
+    print "-" * 50
+    print "Gen-a->%s" % test17['aggs']
+    print "Org-a->%s" % cepQ['aggs']
+    print "-" * 50
+    # print "Gen-ad->%s" % sorted(test17['aggs']['2']['aggs'].keys())
+    # print "Org-ad->%s" % sorted(cepQ['aggs']['2']['aggs'].keys())
+    # print "-" * 50
+    # for k, v in test17['aggs']['2']['aggs'].iteritems():
+    #     if v != cepQ['aggs']['2']['aggs'][k]:
+    #         print "%" * 50
+    #         print "Mismatch Key value in original and generated"
+    #         print "Generate has %s -> %s" % (k, v)
+    #         print "Original has %s -> %s" % (k, fsop['aggs']['2']['aggs'][k])
+    #         print "%" * 50
+    #     else:
+    #         print "Match"
+
+    print "-" * 50
+    print "Gen-s>%s" % test17['size']
+    print "Org-s>%s" % cepQ['size']
+    print "Fail"
+    print "+" * 50
+else:
+    print "Passed Test 17"
