@@ -24,6 +24,7 @@ class AdpEngine:
         self.qsize = settingsDict['qsize']
         self.nodes = nodesParse(settingsDict['nodes'])
         self.qinterval = settingsDict['qinterval']
+        self.categorical = settingsDict['categorical']
         self.train = settingsDict['train']
         self.type = settingsDict['type']
         self.load = settingsDict['load']
@@ -131,6 +132,13 @@ class AdpEngine:
                              str(desNodes))
                 sys.exit(1)
         return desNodes
+
+    def getCategoricalFeatures(self):
+        if not self.categorical:
+            col = None
+        else:
+            col = cfilterparse(self.categorical)
+        return col
 
     def getData(self, detect=False):
         if detect:
@@ -528,6 +536,14 @@ class AdpEngine:
                 else:
                     df = self.dformat.dropColumns(df, cfilterparse(self.dfilter))
         # self.dformat.fillMissing(df)
+        # Check for user defined categorical features
+        if self.categorical == 0:
+            logger.info('[%s] : [INFO] Skipping categorical feature conversion',
+                               datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+            print "Skipping categorical feature conversion"
+        else:
+            col = self.getCategoricalFeatures()
+            df, v, o = self.dformat.ohEncoding(df, cols=col)
         return df
 
     def trainMethod(self):
