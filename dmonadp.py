@@ -71,6 +71,7 @@ def main(argv):
         "validratio":0.0,
         "compare": False,
         "anomalyOnly": False,
+        "categorical": None
     }
 
     # Only for testing
@@ -562,6 +563,27 @@ def main(argv):
         print "Classification data generation using only anomalies set to False"
     logger.info('[%s] : [INFO] Classification data generation using only anomalies set to %s',
                 datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(settings['anomalyOnly']))
+
+    if settings["categorical"] is None:
+        try:
+            if not readCnf['Connector']['categorical']:
+                readCnf['Connector']['categorical'] = 0
+            print "Categorical Features -> %s" % readCnf['Connector']['categorical']
+            if readCnf['Connector']['categorical'] == '0':
+                settings["categorical"] = None
+            else:
+                settings["categorical"] = readCnf['Connector']['categorical']
+            logger.info('[%s] : [INFO] Categorical Features ->  %s',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'),
+                    settings['categorical'])
+        except:
+            logger.warning('[%s] : [WARN] No Categorical Features selected from config file or comandline! Skipping encoding',
+                           datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+            settings["categorical"] = 0
+    else:
+        print "Categorical Features -> %s" % settings["categorical"]
+        logger.info('[%s] : [INFO] Categorical Features ->  %s',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings["categorical"])
 
     #if settings["esendpoint"] == None:
 
