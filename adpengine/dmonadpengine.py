@@ -901,8 +901,78 @@ class AdpEngine:
                                  self.type)
                         sys.exit(1)
             elif self.type == 'classification':
-                print "Not yet supported!"  # TODO
-                sys.exit(0)
+                while True:
+                    print "Collect data ..."
+                    systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn, cassandraReturn, mongoReturn, userQueryReturn, cepQueryReturn = self.getData(
+                        detect=True)
+                    if 'yarn' in queryd:
+                        # yarnReturn = self.filterData(yarnReturn)  # todo
+                        if checkpoint:
+                            data = yarnReturn
+                        else:
+                            dataf = os.path.join(self.dataDir, 'Final_Merge.csv')
+                            data = self.dformat.toDF(dataf)
+                            data.set_index('key', inplace=True)
+                        data = self.filterData(data)
+                    elif 'storm' in queryd:
+                        if checkpoint:
+                            data = stormReturn
+                        else:
+                            dataf = os.path.join(self.dataDir, 'Storm.csv')
+                            data = self.dformat.toDF(dataf)
+                            data.set_index('key', inplace=True)
+                        data = self.filterData(data)
+                    elif 'userquery' in queryd:
+                        if checkpoint:
+                            data = userQueryReturn
+                        else:
+                            dataf = os.path.join(self.dataDir, 'query_response.csv')
+                            data = self.dformat.toDF(dataf)
+                            data.set_index('key', inplace=True)
+                        data = self.filterData(data)
+                    elif 'cep' in queryd:
+                        cepQueryReturn = self.filterData(cepQueryReturn)
+                        if checkpoint:
+                            data = cepQueryReturn
+                        else:
+                            dataf = os.path.join(self.dataDir, 'CEP.csv')
+                            data.set_index('key', inplace=True)
+                            data = self.dformat.toDF(dataf)
+                        data = self.filterData(data)
+                    if self.method in self.allowefMethodsClassification:
+                        print "Detecting with selected method %s of type %s" % (self.method, self.type)
+                        if os.path.isfile(os.path.join(self.modelsDir, self.modelName(self.method, self.load))):
+                            print "Model found at %s" % str(
+                                os.path.join(self.modelsDir, self.modelName(self.method, self.load)))
+                            cmodel = cdmon.SciClassification(self.modelsDir, self.dataDir, self.checkpoint, self.export,
+                                                        training=self.trainingSet, validation=self.validationSet,
+                                                        validratio=self.validratio, compare=self.compare)
+                            anomalies = cmodel.detect(self.method, self.load, data)
+                            if not anomalies['anomalies']:
+                                logger.info('[%s] : [INFO] No anomalies detected with %s',
+                                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(self.method))
+                                print "No anomalies detected with %s" % str(self.method)
+                                sleep(parseDelay(self.delay))
+                            else:
+                                anomalies['method'] = self.method
+                                anomalies['qinterval'] = self.qinterval
+                                self.reportAnomaly(anomalies)
+                                sleep(parseDelay(self.delay))
+                        else:
+                            logger.error('[%s] : [ERROR] Model %s not found at %s ',
+                                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.load,
+                                         str(os.path.join(self.modelsDir, self.modelName(self.method, self.load))))
+                            print "Model not found %s" % self.modelName(self.method, self.load)
+                            sys.exit(1)
+
+                    else:
+                        print "Unknown method %s of type %s" % (self.method, self.type)
+                        logger.error('[%s] : [ERROR] Unknown method %s of type %s ',
+                                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.method,
+                                     self.type)
+                        sys.exit(1)
+
+                # sys.exit(0)
             else:
                 logger.error('[%s] : [ERROR] Unknown type %s ',
                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.type)

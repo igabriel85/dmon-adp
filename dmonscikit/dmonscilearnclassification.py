@@ -31,7 +31,7 @@ class SciClassification:
         self.compare = compare
 
     def detect(self, method, model, data):
-        smodel = self.__loadClusterModel(method, model)
+        smodel = self.__loadClassificationModel(method, model)
         anomalieslist = []
         if not smodel:
             dpredict = 0
@@ -70,13 +70,16 @@ class SciClassification:
                              str(data.shape[1]))
             print "dpredict type is %s" % (type(dpredict))
             if type(dpredict) is not int:
-                # TODO change so all normal events have tag 0
-                anomalyarray = np.argwhere(dpredict != 0)
-                for an in anomalyarray:
+                data['AType'] = dpredict
+                for index, row in data.iterrows():
                     anomalies = {}
-                    anomalies['utc'] = int(data.iloc[an[0]]['key'])
-                    anomalies['hutc'] = ut2hum(int(data.iloc[an[0]]['key']))
-                    anomalieslist.append(anomalies)
+                    if row['AType'] != 0:
+                        print index
+                        print data.get_value(index, 'AType')
+                        anomalies['utc'] = int(index)
+                        anomalies['hutc'] = ut2hum(int(index))
+                        anomalies['anomaly_type'] = data.get_value(index, 'AType')
+                        anomalieslist.append(anomalies)
         anomaliesDict = {}
         anomaliesDict['anomalies'] = anomalieslist
         logger.info('[%s] : [INFO] Detected anomalies with model %s using method %s are -> %s',
@@ -592,7 +595,7 @@ class SciClassification:
             df = df.dropna()
         return df
 
-    def __loadClusterModel(self, method, model):
+    def __loadClassificationModel(self, method, model):
         '''
         :param method: -> method name
         :param model: -> model name
