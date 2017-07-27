@@ -540,6 +540,8 @@ class AdpEngine:
                     df = self.dformat.dropColumns(df, cfilterparse(self.dfilter))
         # self.dformat.fillMissing(df)
         # Check for user defined categorical features
+        if df.index.name is None:
+            df.set_index('key', inplace=True)
         if self.categorical == 0:
             logger.info('[%s] : [INFO] Skipping categorical feature conversion',
                                datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
@@ -570,6 +572,8 @@ class AdpEngine:
                     udata = self.dformat.toDF(os.path.join(self.dataDir, 'query_response.csv'))
                 elif 'cep' in queryd:
                     udata = self.dformat.toDF(os.path.join(self.dataDir, 'CEP.csv'))
+                elif 'system' in queryd:
+                    udata = self.dformat.toDF(os.path.join(self.dataDir, 'System.csv'))
             else:
                 if 'yarn' in queryd:
                     udata = yarnReturn
@@ -585,6 +589,8 @@ class AdpEngine:
                     udata = userqueryReturn
                 elif 'cep' in queryd:
                     udata = cepQueryReturn
+                elif 'system' in queryd:
+                    udata = systemReturn
             udata = self.filterData(udata) #todo check
             if self.type == 'clustering':
                 if self.method in self.allowedMethodsClustering:
@@ -931,13 +937,13 @@ class AdpEngine:
                             data.set_index('key', inplace=True)
                         data = self.filterData(data)
                     elif 'cep' in queryd:
-                        cepQueryReturn = self.filterData(cepQueryReturn)
+                        # cepQueryReturn = self.filterData(cepQueryReturn)
                         if checkpoint:
                             data = cepQueryReturn
                         else:
                             dataf = os.path.join(self.dataDir, 'CEP.csv')
-                            data.set_index('key', inplace=True)
                             data = self.dformat.toDF(dataf)
+                        data.set_index('key', inplace=True)
                         data = self.filterData(data)
                     if self.method in self.allowefMethodsClassification:
                         print "Detecting with selected method %s of type %s" % (self.method, self.type)
@@ -1616,15 +1622,16 @@ class AdpEngine:
                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
             sys.exit(1)
         if not dCepArray:
-            print "empty"
-            print gcep
+            print "CEP response is empty! Exiting ...."
+            logger.error('[%s] : [WARN] CEP response is empty!',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
             sys.exit(1)
         df = self.dformat.dtoDF(dCepArray)
         if not checkpoint:
             self.dformat.df2csv(df, os.path.join(self.dataDir, cep_file))
             returnCEP = 0
         else:
-            df.set_index('key', inplace=True)
+            # df.set_index('key', inplace=True)
             returnCEP = df
         print "Querying  CEP metrics complete"
         logger.info('[%s] : [INFO] Querying  CEP metrics complete',

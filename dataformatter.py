@@ -612,7 +612,10 @@ class DataFormatter:
             cols = []
             for el, v in data.dtypes.iteritems():
                 if v == 'object':
-                    cols.append(el)
+                    if el == 'key':
+                        pass
+                    else:
+                        cols.append(el)
             logger.info('[%s] : [INFO] Categorical features not set, detected as categorical: %s',
                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(cols))
             print "Categorical features not set, detected as categorical: %s" % str(cols)

@@ -38,7 +38,7 @@ class Connector:
         self.myIndex = index
 
     def query(self, queryBody, allm=True, dMetrics=[], debug=False):
-        res = self.esInstance.search(index=self.myIndex, body=queryBody)
+        res = self.esInstance.search(index=self.myIndex, body=queryBody, request_timeout=230)
         if debug == True:
             print "%---------------------------------------------------------%"
             print "Raw JSON Ouput"
@@ -210,8 +210,9 @@ class Connector:
         return rData
 
     def aggQuery(self, queryBody):
+        adt_timeout = os.environ['ADP_TIMEOUT'] = os.getenv('ADP_TIMEOUT', str(60)) # Set timeout as env variable ADT_TIMEOUT, if not set use default 60
         try:
-            res = self.esInstance.search(index=self.myIndex, body=queryBody)
+            res = self.esInstance.search(index=self.myIndex, body=queryBody, request_timeout=float(adt_timeout))
         except Exception as inst:
             logger.error('[%s] : [ERROR] Exception while executing ES query with %s and %s', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
             sys.exit(2)
