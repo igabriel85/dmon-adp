@@ -14,7 +14,7 @@ Flask-Mail==0.9.0
 Flask-Migrate==1.2.0
 Flask-Moment==0.3.3
 Flask-OpenID==1.2.4
-flask-rdf==0.1.6
+flask-rdf
 Flask-RESTful==0.3.4
 flask-restful-swagger==0.19
 flask-restplus==0.7.2
@@ -36,7 +36,7 @@ iso8601==0.1.11
 isodate==0.5.1
 itsdangerous==0.24
 javabridge==1.0.14
-jedi===0.8.1-final0
+jedi==0.8.1-final
 Jinja2==2.8
 jsonpatch==1.13
 jsonpointer==1.10
@@ -51,7 +51,7 @@ msgpack-python==0.4.7
 netaddr==0.7.18
 netifaces==0.10.4
 networkx==1.10
-numpy==1.11.0
+numpy
 openopt==0.5308
 os-client-config==1.16.0
 oslo.config==1.9.3

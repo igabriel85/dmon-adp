@@ -9,9 +9,11 @@ import numpy as np
 from sklearn.ensemble import IsolationForest
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier, export_graphviz
+from sklearn.neural_network import MLPClassifier
 from sklearn import model_selection
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.preprocessing import StandardScaler
+from sklearn.grid_search import GridSearchCV
 from sklearn.cluster import DBSCAN
 import cPickle as pickle
 from util import str2Bool
@@ -31,7 +33,7 @@ class SciClassification:
         self.compare = compare
 
     def detect(self, method, model, data):
-        smodel = self.__loadClusterModel(method, model)
+        smodel = self.__loadClassificationModel(method, model)
         anomalieslist = []
         if not smodel:
             dpredict = 0
@@ -70,13 +72,16 @@ class SciClassification:
                              str(data.shape[1]))
             print "dpredict type is %s" % (type(dpredict))
             if type(dpredict) is not int:
-                # TODO change so all normal events have tag 0
-                anomalyarray = np.argwhere(dpredict != 0)
-                for an in anomalyarray:
+                data['AType'] = dpredict
+                for index, row in data.iterrows():
                     anomalies = {}
-                    anomalies['utc'] = int(data.iloc[an[0]]['key'])
-                    anomalies['hutc'] = ut2hum(int(data.iloc[an[0]]['key']))
-                    anomalieslist.append(anomalies)
+                    if row['AType'] != 0:
+                        print index
+                        print data.get_value(index, 'AType')
+                        anomalies['utc'] = int(index)
+                        anomalies['hutc'] = ut2hum(int(index))
+                        anomalies['anomaly_type'] = data.get_value(index, 'AType')
+                        anomalieslist.append(anomalies)
         anomaliesDict = {}
         anomaliesDict['anomalies'] = anomalieslist
         logger.info('[%s] : [INFO] Detected anomalies with model %s using method %s are -> %s',
@@ -162,7 +167,7 @@ class SciClassification:
                                     min_weight_fraction_leaf=float(settings["min_weight_faction_leaf"]), random_state=settings["random_state"])
         if self.validratio:
             trainSize = 1.0 - self.validratio
-            print "Random forest training to validation ratio set to: %s" % str(self.validratio)
+            print "Decision Tree training to validation ratio set to: %s" % str(self.validratio)
             logger.info('[%s] : [INFO] Random forest training to validation ratio set to: %s',
                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(self.validratio))
             d_train, d_test, f_train, f_test = self.__dataSplit(X, y, testSize=self.validratio, trainSize=trainSize)
@@ -398,6 +403,7 @@ class SciClassification:
         logger.info('[%s] : [INFO] Starting training data generation ...',
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
         df = self.__loadData(data, dropna)
+        print df.index.name
         if df.index.name is None:
             df.set_index('key', inplace=True)
         logger.info('[%s] : [INFO] Input Dataframe shape: %s',
@@ -554,10 +560,17 @@ class SciClassification:
             # print data_labeled[['Target', 'Target2']]
             # initialize empty column
             df['TargetF'] = np.nan
-
+            print df.shape
+            print anomalyFrame.shape
             # add clustered anomalies to original dataframe
             for k in anomalyFrame.index.values:
-                df.set_value(k, 'TargetF', anomalyFrame.loc[k, 'Target2'])
+                try:
+                    df.set_value(k, 'TargetF', anomalyFrame.loc[k, 'Target2'])
+                except Exception as inst:
+                    print inst.args
+                    print type(inst)
+                    print k
+                    sys.exit()
             # Mark all normal instances as 0
             df = df.fillna(0)
             if df.isnull().values.any():
@@ -588,11 +601,28 @@ class SciClassification:
                              datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(type(data)))
                 sys.exit(1)
             df = data
+        if df.index.name is None:
+            df.set_index('key', inplace=True)
         if dropna:
             df = df.dropna()
         return df
 
-    def __loadClusterModel(self, method, model):
+    def __gridSearch(self, est, X, y):
+        if isinstance(est, RandomForestClassifier):
+            param_grid = {
+                'n_estimators': [200, 300, 400, 500, 800, 1000],
+                'max_features': ['auto', 'sqrt', 'log2'],
+                'max_depth': [5, 15, 25]
+            }
+
+        CV_rfc = GridSearchCV(estimator=est, param_grid=param_grid, cv=5)
+        CV_rfc.fit(X, y)
+        logger.info('[%s] : [INFO] Best parameters are: %s',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), CV_rfc.best_params_)
+        print 'Best parameters are: %s'  % CV_rfc.best_params_
+        return CV_rfc.best_params_
+
+    def __loadClassificationModel(self, method, model):
         '''
         :param method: -> method name
         :param model: -> model name

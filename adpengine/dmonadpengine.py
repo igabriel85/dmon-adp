@@ -24,6 +24,7 @@ class AdpEngine:
         self.qsize = settingsDict['qsize']
         self.nodes = nodesParse(settingsDict['nodes'])
         self.qinterval = settingsDict['qinterval']
+        self.categorical = settingsDict['categorical']
         self.train = settingsDict['train']
         self.type = settingsDict['type']
         self.load = settingsDict['load']
@@ -70,6 +71,7 @@ class AdpEngine:
         self.reducemetrics = 0
         self.mrapp = 0
         self.userQueryReturn = 0
+        self.cepQueryReturn = 0
         self.dataNodeTraining = 0
         self.dataNodeDetecting = 0
 
@@ -131,6 +133,13 @@ class AdpEngine:
                              str(desNodes))
                 sys.exit(1)
         return desNodes
+
+    def getCategoricalFeatures(self):
+        if not self.categorical:
+            col = None
+        else:
+            col = cfilterparse(self.categorical)
+        return col
 
     def getData(self, detect=False):
         if detect:
@@ -475,7 +484,9 @@ class AdpEngine:
             self.mongoReturn = self.getMongodb(desNodes, detect=detect)
         elif 'userquery' in queryd:
             self.userQueryReturn = self.getQuery(detect=detect)
-        return self.systemReturn, self.yarnReturn, self.reducemetrics, self.mapmetrics, self.mrapp, self.sparkReturn, self.stormReturn, self.cassandraReturn, self.mongoReturn, self.userQueryReturn
+        elif 'cep' in queryd:
+            self.cepQueryReturn = self.getCEP(detect=detect)
+        return self.systemReturn, self.yarnReturn, self.reducemetrics, self.mapmetrics, self.mrapp, self.sparkReturn, self.stormReturn, self.cassandraReturn, self.mongoReturn, self.userQueryReturn, self.cepQueryReturn
 
     def filterData(self, df, m=False):
         '''
@@ -528,6 +539,16 @@ class AdpEngine:
                 else:
                     df = self.dformat.dropColumns(df, cfilterparse(self.dfilter))
         # self.dformat.fillMissing(df)
+        # Check for user defined categorical features
+        if df.index.name is None:
+            df.set_index('key', inplace=True)
+        if self.categorical == 0:
+            logger.info('[%s] : [INFO] Skipping categorical feature conversion',
+                               datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+            print "Skipping categorical feature conversion"
+        else:
+            col = self.getCategoricalFeatures()
+            df, v, o = self.dformat.ohEncoding(df, cols=col)
         return df
 
     def trainMethod(self):
@@ -535,7 +556,7 @@ class AdpEngine:
             print "Getting data ..."
             checkpoint = str2Bool(self.checkpoint)
             queryd = queryParser(self.query)
-            systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn, cassandraReturn, mongoReturn, userqueryReturn = self.getData()
+            systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn, cassandraReturn, mongoReturn, userqueryReturn, cepQueryReturn = self.getData()
             if not checkpoint:
                 if 'yarn' in queryd:
                     udata = self.dformat.toDF(os.path.join(self.dataDir, 'Final_Merge.csv'))
@@ -549,6 +570,10 @@ class AdpEngine:
                     return "not yet implemented"  # todo
                 elif 'userquery' in queryd:
                     udata = self.dformat.toDF(os.path.join(self.dataDir, 'query_response.csv'))
+                elif 'cep' in queryd:
+                    udata = self.dformat.toDF(os.path.join(self.dataDir, 'CEP.csv'))
+                elif 'system' in queryd:
+                    udata = self.dformat.toDF(os.path.join(self.dataDir, 'System.csv'))
             else:
                 if 'yarn' in queryd:
                     udata = yarnReturn
@@ -562,6 +587,10 @@ class AdpEngine:
                     return "not yet implemented"  # todo
                 elif 'userquery' in queryd:
                     udata = userqueryReturn
+                elif 'cep' in queryd:
+                    udata = cepQueryReturn
+                elif 'system' in queryd:
+                    udata = systemReturn
             udata = self.filterData(udata) #todo check
             if self.type == 'clustering':
                 if self.method in self.allowedMethodsClustering:
@@ -589,6 +618,8 @@ class AdpEngine:
                             dataf = os.path.join(self.dataDir, 'Merged_Mongo.csv')
                         elif 'userquery' in queryd:
                             dataf = os.path.join(self.dataDir, 'query_response.csv')
+                        elif 'cep' in queryd:
+                            dataf = os.path.join(self.dataDir, 'cep.csv')
                         data = dataf
                     if self.method == 'skm':
                         print "Method %s settings detected -> %s" % (self.method, str(self.methodSettings))
@@ -798,7 +829,7 @@ class AdpEngine:
             if self.type == 'clustering':
                 while True:
                     print "Collect data ..."
-                    systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn, cassandraReturn, mongoReturn, userQueryReturn = self.getData(detect=True)
+                    systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn, cassandraReturn, mongoReturn, userQueryReturn, cepQueryReturn = self.getData(detect=True)
                     # if list(set(self.dformat.fmHead) - set(list(yarnReturn.columns.values))):
                     #     print "Mismatch between desired and loaded data"
                     #     sys.exit()
@@ -818,19 +849,27 @@ class AdpEngine:
                             dataf = os.path.join(self.dataDir, 'Final_Merge.csv')
                             data = dataf
                     elif 'storm' in queryd:
-                        stormReturn = self.filterData(stormReturn)
                         if checkpoint:
                             data = stormReturn
                         else:
                             dataf = os.path.join(self.dataDir, 'Storm.csv')
                             data = dataf
+                        data = self.filterData(data)
                     elif 'userquery' in queryd:
-                        userQueryReturn = self.filterData(userQueryReturn)
                         if checkpoint:
                             data = userQueryReturn
                         else:
                             dataf = os.path.join(self.dataDir, 'query_response.csv')
-                            data = dataf
+                            data = self.dformat.toDF(dataf)
+                        data = self.filterData(data)
+                    elif 'cep' in queryd:
+                        cepQueryReturn = self.filterData(cepQueryReturn)
+                        if checkpoint:
+                            data = cepQueryReturn
+                        else:
+                            dataf = os.path.join(self.dataDir, 'CEP.csv')
+                            data = self.dformat.toDF(dataf)
+                        data = self.filterData(data)
                     if self.method in self.allowedMethodsClustering:
                         print "Detecting with selected method %s of type %s" % (self.method, self.type)
                         if os.path.isfile(os.path.join(self.modelsDir, self.modelName(self.method, self.load))):
@@ -868,8 +907,78 @@ class AdpEngine:
                                  self.type)
                         sys.exit(1)
             elif self.type == 'classification':
-                print "Not yet supported!"  # TODO
-                sys.exit(0)
+                while True:
+                    print "Collect data ..."
+                    systemReturn, yarnReturn, reducemetrics, mapmetrics, mrapp, sparkReturn, stormReturn, cassandraReturn, mongoReturn, userQueryReturn, cepQueryReturn = self.getData(
+                        detect=True)
+                    if 'yarn' in queryd:
+                        # yarnReturn = self.filterData(yarnReturn)  # todo
+                        if checkpoint:
+                            data = yarnReturn
+                        else:
+                            dataf = os.path.join(self.dataDir, 'Final_Merge.csv')
+                            data = self.dformat.toDF(dataf)
+                            data.set_index('key', inplace=True)
+                        data = self.filterData(data)
+                    elif 'storm' in queryd:
+                        if checkpoint:
+                            data = stormReturn
+                        else:
+                            dataf = os.path.join(self.dataDir, 'Storm.csv')
+                            data = self.dformat.toDF(dataf)
+                            data.set_index('key', inplace=True)
+                        data = self.filterData(data)
+                    elif 'userquery' in queryd:
+                        if checkpoint:
+                            data = userQueryReturn
+                        else:
+                            dataf = os.path.join(self.dataDir, 'query_response.csv')
+                            data = self.dformat.toDF(dataf)
+                            data.set_index('key', inplace=True)
+                        data = self.filterData(data)
+                    elif 'cep' in queryd:
+                        # cepQueryReturn = self.filterData(cepQueryReturn)
+                        if checkpoint:
+                            data = cepQueryReturn
+                        else:
+                            dataf = os.path.join(self.dataDir, 'CEP.csv')
+                            data = self.dformat.toDF(dataf)
+                        data.set_index('key', inplace=True)
+                        data = self.filterData(data)
+                    if self.method in self.allowefMethodsClassification:
+                        print "Detecting with selected method %s of type %s" % (self.method, self.type)
+                        if os.path.isfile(os.path.join(self.modelsDir, self.modelName(self.method, self.load))):
+                            print "Model found at %s" % str(
+                                os.path.join(self.modelsDir, self.modelName(self.method, self.load)))
+                            cmodel = cdmon.SciClassification(self.modelsDir, self.dataDir, self.checkpoint, self.export,
+                                                        training=self.trainingSet, validation=self.validationSet,
+                                                        validratio=self.validratio, compare=self.compare)
+                            anomalies = cmodel.detect(self.method, self.load, data)
+                            if not anomalies['anomalies']:
+                                logger.info('[%s] : [INFO] No anomalies detected with %s',
+                                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(self.method))
+                                print "No anomalies detected with %s" % str(self.method)
+                                sleep(parseDelay(self.delay))
+                            else:
+                                anomalies['method'] = self.method
+                                anomalies['qinterval'] = self.qinterval
+                                self.reportAnomaly(anomalies)
+                                sleep(parseDelay(self.delay))
+                        else:
+                            logger.error('[%s] : [ERROR] Model %s not found at %s ',
+                                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.load,
+                                         str(os.path.join(self.modelsDir, self.modelName(self.method, self.load))))
+                            print "Model not found %s" % self.modelName(self.method, self.load)
+                            sys.exit(1)
+
+                    else:
+                        print "Unknown method %s of type %s" % (self.method, self.type)
+                        logger.error('[%s] : [ERROR] Unknown method %s of type %s ',
+                                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.method,
+                                     self.type)
+                        sys.exit(1)
+
+                # sys.exit(0)
             else:
                 logger.error('[%s] : [ERROR] Unknown type %s ',
                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.type)
@@ -1470,6 +1579,65 @@ class AdpEngine:
         logger.info('[%s] : [INFO] Querying  Name Node metrics complete',
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
         return returnUQ
+
+    def getCEP(self, detect=False):
+        if detect:
+            tfrom = "now-%s" % self.interval
+            to = "now"
+        else:
+            tfrom = self.tfrom
+            to = self.to
+        print "Querying CEP metrics ..."
+        logger.info('[%s] : [INFO] Querying  CEP metrics ...',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        checkpoint = str2Bool(self.checkpoint)
+        cep, cep_file = self.qConstructor.cepQueryString()
+
+        # Queries
+        qcep = self.qConstructor.cepQuery(cep, tfrom, to, self.qsize, self.interval, qmin_doc_count=0)
+
+
+        # Execute query and convert response to csv
+        respMetrics, gcep = self.dmonConnector.query(queryBody=qcep)
+        print gcep
+        dCepArray = []
+        try:
+            for el in gcep['hits']['hits']:
+                try:
+                    dCep = {}
+                    dCep['ms'] = el['_source']['ms']
+                    dCep['key'] = el['_source']['@timestamp']
+                    dCep['component'] = el['_source']['Component']
+                    dCep['host'] = el['_source']['host']
+                    dCep['ship'] = el['_source']['ship']
+                    dCep['method'] = el['_source']['method']
+                    dCepArray.append(dCep)
+                except Exception as inst:
+                    print 'Failed to parse CEP response!'
+                    logger.warning('[%s] : [WARN] Failed to parse CEP response with %s and %s',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+        except Exception as inst:
+            print 'Malformed CEP response detected. Exiting!'
+            logger.error('[%s] : [ERROR] Malformed CEP response detected  with %s and %s',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+            sys.exit(1)
+        if not dCepArray:
+            print "CEP response is empty! Exiting ...."
+            logger.error('[%s] : [WARN] CEP response is empty!',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+            sys.exit(1)
+        df = self.dformat.dtoDF(dCepArray)
+        if not checkpoint:
+            self.dformat.df2csv(df, os.path.join(self.dataDir, cep_file))
+            returnCEP = 0
+        else:
+            # df.set_index('key', inplace=True)
+            returnCEP = df
+        print "Querying  CEP metrics complete"
+        logger.info('[%s] : [INFO] Querying  CEP metrics complete',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+
+        return returnCEP
 
     def printTest(self):
         print "Endpoint -> %s" %self.esendpoint

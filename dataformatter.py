@@ -26,6 +26,7 @@ import sys
 import pandas as pd
 import glob
 from util import convertCsvtoArff, csvheaders2colNames
+from sklearn.feature_extraction import DictVectorizer
 import weka.core.jvm as jvm
 
 
@@ -336,7 +337,7 @@ class DataFormatter:
         if dataFrame.empty:
             logger.error('[%s] : [ERROR] Received empty dataframe for  %s ',
                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), mergedFile)
-            print "Received mepty dataframe for %s " % mergedFile
+            print "Received empty dataframe for %s " % mergedFile
             sys.exit(1)
         try:
             kDF = dataFrame.set_index('key')
@@ -588,6 +589,14 @@ class DataFormatter:
         df = pd.read_csv(fileName)
         return df
 
+    def dtoDF(self, dlist):
+        '''
+        :param dlist: list of dictionaries
+        :return: dataframe
+        '''
+        df = pd.DataFrame(dlist)
+        return df
+
     def df2BytesIO(self, df):
         out = io.BytesIO()
         self.df2csv(df, out)
@@ -597,5 +606,31 @@ class DataFormatter:
         out = cStringIO.StringIO()
         self.df2csv(df, out)
         return out
+
+    def ohEncoding(self, data, cols=None, replace=True):
+        if cols is None:
+            cols = []
+            for el, v in data.dtypes.iteritems():
+                if v == 'object':
+                    if el == 'key':
+                        pass
+                    else:
+                        cols.append(el)
+            logger.info('[%s] : [INFO] Categorical features not set, detected as categorical: %s',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(cols))
+            print "Categorical features not set, detected as categorical: %s" % str(cols)
+        vec = DictVectorizer()
+        mkdict = lambda row: dict((col, row[col]) for col in cols)
+        vecData = pd.DataFrame(vec.fit_transform(data[cols].apply(mkdict, axis=1)).toarray())
+        vecData.columns = vec.get_feature_names()
+        vecData.index = data.index
+        if replace is True:
+            data = data.drop(cols, axis=1)
+            data = data.join(vecData)
+        return data, vecData, vec
+
+
+    def labelEncoding(self):
+        return True
 
 
