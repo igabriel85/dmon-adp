@@ -13,6 +13,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.model_selection import learning_curve
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import validation_curve
 from sklearn.model_selection import KFold
 import subprocess
 import os
@@ -89,6 +90,34 @@ def plot_learning_curve(estimator, title, X, y, ylim=None, cv=None,
     plt.legend(loc="best")
     return plt
 
+
+def validation_crv(estimator, X, y, title, n_jobs=1):
+    param_range = np.logspace(-6, -1, 5)
+    train_scores, test_scores = validation_curve(
+        estimator, X, y, param_name="max_features", param_range=param_range,
+        cv=10, scoring="accuracy", n_jobs=n_jobs)
+    train_scores_mean = np.mean(train_scores, axis=1)
+    train_scores_std = np.std(train_scores, axis=1)
+    test_scores_mean = np.mean(test_scores, axis=1)
+    test_scores_std = np.std(test_scores, axis=1)
+
+    plt.title(title)
+    plt.xlabel("$\gamma$")
+    plt.ylabel("Score")
+    plt.ylim(0.0, 1.1)
+    lw = 2
+    plt.semilogx(param_range, train_scores_mean, label="Training score",
+                 color="darkorange", lw=lw)
+    plt.fill_between(param_range, train_scores_mean - train_scores_std,
+                     train_scores_mean + train_scores_std, alpha=0.2,
+                     color="darkorange", lw=lw)
+    plt.semilogx(param_range, test_scores_mean, label="Cross-validation score",
+                 color="navy", lw=lw)
+    plt.fill_between(param_range, test_scores_mean - test_scores_std,
+                     test_scores_mean + test_scores_std, alpha=0.2,
+                     color="navy", lw=lw)
+    plt.legend(loc="best")
+    return plt
 print "#" *150
 print "Getting Data ..."
 
@@ -187,6 +216,10 @@ print "Training Score Random Forest: %s" % score_RF
 elapsed_time_g = time.time() - start_time_b
 print "Training Baseline for Random Forest took: %s" % str(elapsed_time_g)
 
+print "Example Random Forest validation curve for number of estimators done"
+test = validation_crv(rfb, X, y, "Test", n_jobs=1)
+test.savefig(os.path.join(expDir, 'Rforest_valid_curve.png'))
+
 
 start_time_b = time.time()
 dtb = DecisionTreeClassifier()
@@ -251,10 +284,11 @@ elapsed_time = time.time() - start_time
 print "Cross validation took: %s" % str(elapsed_time)
 
 title = "Learning Curves (Random Forest)"
-plot_learning_curve(clfKV, title, X, y, ylim=(0.7, 1.01), cv=kfold, n_jobs=4)
+plot_learning_curve(clfKV, title, X, y, ylim=(0.2, 1.01), cv=kfold, n_jobs=4)
+
+print "Saving Lerning Curve (Random Forest)"
 plt.savefig(os.path.join(expDir, 'Rforest.png'))
 
-sys.exit()
 start_time = time.time()
 clf = RandomForestClassifier(max_depth=bestParam['max_depth'], n_estimators=bestParam['n_estimators'],
                              max_features=bestParam['max_features'], n_jobs=-1)
