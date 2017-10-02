@@ -9,6 +9,7 @@ from time import sleep
 import tempfile
 from dmonscikit import dmonscilearncluster as sdmon
 from dmonscikit import dmonscilearnclassification as cdmon
+import subprocess
 
 
 class AdpEngine:
@@ -48,7 +49,7 @@ class AdpEngine:
         self.anomalyIndex = "anomalies"
         self.regnodeList = []
         self.allowedMethodsClustering = ['skm', 'em', 'dbscan', 'sdbscan', 'isoforest']
-        self.allowefMethodsClassification = ['randomforest', 'decisiontree', 'sneural', 'adaboost', 'naivebayes']  # TODO
+        self.allowefMethodsClassification = ['randomforest', 'decisiontree', 'sneural', 'adaboost', 'naivebayes', 'rbad']  # TODO
         self.heap = settingsDict['heap']
         self.dmonConnector = Connector(self.esendpoint, dmonPort=self.dmonPort, index=self.index)
         self.qConstructor = QueryConstructor(self.queryDir)
@@ -707,15 +708,45 @@ class AdpEngine:
                         logger.info('[%s] : [INFO] Initializaing RandomForest model creation ....',
                                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
                         rfmodel = classdmon.randomForest(settings=self.methodSettings, data=udata, dropna=True)
-
                     elif self.method == 'decisiontree':
-                        print "dt"
+                        logger.info('[%s] : [INFO] Initializaing Decision Tree model creation ....',
+                                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+                        dtmodel = classdmon.decisionTree(settings=self.methodSettings, data=udata, dropna=True)
                     elif self.method == 'sneural':
-                        print 'sneural'
+                        logger.info('[%s] : [INFO] Initializaing Neural Network model creation ....',
+                                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+                        nnmodel = classdmon.neuralNet(settings=self.methodSettings, data=udata, dropna=True)
                     elif self.method == 'adaboost':
-                        print 'addaboost'
+                        logger.info('[%s] : [INFO] Initializaing Ada Boost model creation ....',
+                                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+                        admodel = classdmon.adaBoost(settings=self.methodSettings, data=udata, dropna=True)
                     elif self.method == 'naivebayes':
-                        print 'naivebayes'
+                        print 'NaiveBayes not available in this version!'
+                        logger.warning('[%s] : [WARN] NaiveBayes not available in this version!',
+                                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+                        sys.exit(0)
+                    elif self.method == 'rbad':
+                        rbad_home = os.environ['RBAD_HOME'] = os.getenv('RBAD_HOME', os.getcwd())
+                        rbad_exec = os.path.join(rbad_home, 'RBAD')
+
+                        if os.path.isfile(rbad_exec):
+                            logger.error('[%s] : [ERROR] RBAD Executable nor found at %s',
+                                           datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), rbad_exec)
+                            sys.exit(1)
+                        rbadPID = 0
+                        try:
+                            rbadPID = subprocess.Popen(rbad_exec, stdout=subprocess.PIPE,
+                                                     close_fds=True).pid
+                        except Exception as inst:
+                            logger.error("[%s] : [ERROR] Cannot start RBAD with %s and %s",
+                                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'),
+                                             type(inst), inst.args)
+                            sys.exit(1)
+
+                        print "RBAD finished"
+                        logger.info('[%s] : [WARN] RBAD finished!',
+                                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+                        sys.exit(0)
                     self.train = False
                 else:
                     logger.error('[%s] : [ERROR] Unknown method %s of type %s ',
@@ -1612,7 +1643,6 @@ class AdpEngine:
 
         # Queries
         qcep = self.qConstructor.cepQuery(cep, tfrom, to, self.qsize, self.interval, qmin_doc_count=0)
-
 
         # Execute query and convert response to csv
         respMetrics, gcep = self.dmonConnector.query(queryBody=qcep)
