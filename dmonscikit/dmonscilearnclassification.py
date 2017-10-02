@@ -19,6 +19,7 @@ import cPickle as pickle
 from util import str2Bool
 import glob
 from util import ut2hum
+import itertools
 
 
 class SciClassification:
@@ -63,6 +64,66 @@ class SciClassification:
                         logger.error('[%s] : [ERROR] Error while fitting randomforest model to event with %s and %s',
                              datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
                         dpredict = 0
+                elif isinstance(smodel, AdaBoostClassifier):
+                    print "Detected AdaBoost model"
+                    print "base_estimator -> %s" % smodel.base_estimator
+                    print "n_estimators -> %s" % smodel.n_estimators
+                    print "Learning_rate -> %s" % smodel.learning_rate
+                    print "Algorithm -> %s" % smodel.algorithm
+                    print "Random State -> %s" % smodel.random_state
+                    try:
+                        dpredict = smodel.predict(self.df)
+                        print "AdaBoost Prediction Array -> %s" % str(dpredict)
+                    except Exception as inst:
+                        logger.error('[%s] : [ERROR] Error while fitting AdaBoost model to event with %s and %s',
+                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+                        sys.exit(1)
+                elif isinstance(smodel, DecisionTreeClassifier):
+                    print "Detected Decision Tree model"
+                    print "Criterion -> %s" % smodel.criterion
+                    print "Spliter -> %s" % smodel.splitter
+                    print "Max_Depth -> %s" % smodel.max_depth
+                    print "Min_sample_split -> %s " % smodel.min_samples_split
+                    print "Min_sample_leaf -> %s " % smodel.min_samples_leaf
+                    print "Min_weight_fraction_leaf -> %s " % smodel.min_weight_fraction_leaf
+                    print "Max_Features -> %s" % smodel.max_features
+                    print "Random_state -> %s " % smodel.random_state
+                    print "Max_leaf_nodes -> %s " % smodel.max_leaf_nodes
+                    print "Min_impurity_split -> %s " % smodel.min_impurity_split
+                    print "Class_weight -> %s " % smodel.class_weight
+                    try:
+                        dpredict = smodel.predict(self.df)
+                        print "Decision Tree Prediction Array -> %s" % str(dpredict)
+                    except Exception as inst:
+                        logger.error('[%s] : [ERROR] Error while fitting Decision Tree model to event with %s and %s',
+                                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst),
+                                     inst.args)
+                        sys.exit(1)
+
+                elif isinstance(smodel, MLPClassifier):
+                    print "Detected Neural Network model"
+                    print "Hidden Layer size -> %s" % str(smodel.hidden_layer_sizes)
+                    print "Activation -> %s" % smodel.activation
+                    print "Solver -> %s" % smodel.solver
+                    print "Alpha -> %s" % smodel.alpha
+                    print "Batch Size -> %s" % smodel.batch_size
+                    print "Learning rate -> %s" % smodel.learning_rate
+                    print "Max Iterations -> %s" % smodel.max_iter
+                    print "Shuffle -> %s" % smodel.shuffle
+                    print "Momentum -> %s" % smodel.momentum
+                    print "Epsilon -> %s" % smodel.epsilon
+                    try:
+                        dpredict = smodel.predict(self.df)
+                        print "MLP Prediction Array -> %s" % str(dpredict)
+                    except Exception as inst:
+                        logger.error('[%s] : [ERROR] Error while fitting MLP model to event with %s and %s',
+                                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst),
+                                     inst.args)
+                        sys.exit(1)
+                else:
+                    logger.error('[%s] : [ERROR] Unsuported model loaded: %s!',
+                             datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(smodel))
+                    sys.exit(1)
             else:
                 dpredict = 0
                 logger.warning('[%s] : [WARN] Dataframe empty with shape (%s,%s)',
@@ -89,36 +150,253 @@ class SciClassification:
                     str(anomaliesDict))
         return anomaliesDict
 
-    def score(self):
-        return True
+    def score(self, model, X, y):
+        return model.score(X, y)
 
-    def compare(self):
-        return True
+    def compare(self, modelList, X, y):
+        scores = []
+        for model in modelList:
+            scores.append(model.score(X,y))
+        logger.info('[%s] : [INFO] Best performing model score is -> %s',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), max(scores))
+        # for a, b in itertools.combinations(modelList, 2):
+        #     a.score(X, y)
+        #     b.score(X, y)
+        return modelList.index(max(scores))
 
-    def crossvalid(self):
-        return True
+    def crossvalid(self, model, X, y, kfold):
+        return model_selection.cross_val_score(model, X, y, cv=kfold)
 
     def naiveBayes(self):
         return True
 
     def adaBoost(self, settings, data=None, dropna=True):
+        if "n_estimators" not in settings:
+            print "Received settings for Ada Boost are %s invalid!" % str(settings)
+            logger.error('[%s] : [ERROR] Received settings for Decision Tree %s are invalid',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(settings))
+            sys.exit(1)
+        dtallowedSettings = ["n_estimators", "learning_rate"]
+        for k, v in settings.iteritems():
+            if k in dtallowedSettings:
+                logger.info('[%s] : [INFO] Ada Boost %s set to %s',
+                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), k, v)
+                print "Ada Boost %s set to %s" % (k, v)
+
+        if not isinstance(self.export, str):
+            mname = 'default'
+        else:
+            mname = self.export
         df = self.__loadData(data, dropna)
         features = df.columns[:-1]
         X = df[features]
         y = df.iloc[:, -1].values
         seed = 7
-        num_trees = 500
+        # num_trees = 500
         kfold = model_selection.KFold(n_splits=10, random_state=seed)
         print kfold
-        model = AdaBoostClassifier(n_estimators=num_trees, random_state=seed)
-        results = model_selection.cross_val_score(model, X, y, cv=kfold)
-        model.fit(X, y)
-        print results.mean()
-        print model.score(X, y)
-        return True
+        ad = AdaBoostClassifier(n_estimators=settings['n_estimators'], learning_rate=settings['learning_rate'],
+                                   random_state=seed)
+        if self.validratio:
+            trainSize = 1.0 - self.validratio
+            print "Decision Tree training to validation ratio set to: %s" % str(self.validratio)
+            logger.info('[%s] : [INFO] Ada Boost training to validation ratio set to: %s',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(self.validratio))
+            d_train, d_test, f_train, f_test = self.__dataSplit(X, y, testSize=self.validratio, trainSize=trainSize)
+            ad.fit(d_train, f_train)
+            predict = ad.predict(d_train)
+            print "Prediction for Ada Boost Training:"
+            print predict
 
-    def neuralNet(self):
-        return True
+            print "Actual labels of training set:"
+            print f_train
+
+            predProb = ad.predict_proba(d_train)
+            print "Prediction probabilities for Ada Boost Training:"
+            print predProb
+
+            score = ad.score(d_train, f_train)
+            print "Ada Boost Training Score: %s" % str(score)
+            logger.info('[%s] : [INFO] Ada Boost training score: %s',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(score))
+
+            feature_imp = list(zip(d_train, ad.feature_importances_))
+            print "Feature importance Ada Boost Training: "
+            print list(zip(d_train, ad.feature_importances_))
+            logger.info('[%s] : [INFO] Ada Boost feature importance: %s',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(feature_imp))
+
+            pred_valid = ad.predict(d_test)
+            print "Ada Boost Validation set prediction: "
+            print pred_valid
+            print "Actual values of validation set: "
+            print d_test
+            score_valid = ad.score(d_test, f_test)
+            print "Ada Boost validation set score: %s" % str(score_valid)
+            logger.info('[%s] : [INFO] Ada Boost validation score: %s',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(score_valid))
+        else:
+            ad.fit(X, y)
+            predict = ad.predict(X)
+            print "Prediction for Ada Boost Training:"
+            print predict
+
+            print "Actual labels of training set:"
+            print y
+
+            predProb = ad.predict_proba(X)
+            print "Prediction probabilities for Ada Boost Training:"
+            print predProb
+
+            score = ad.score(X, y)
+            print "Ada Boost Training Score: %s" % str(score)
+
+            fimp = list(zip(X, ad.feature_importances_))
+            print "Feature importance Ada Boost Training: "
+            print fimp
+            dfimp = dict(fimp)
+            dfimp = pd.DataFrame(dfimp.items(), columns=['Metric', 'Importance'])
+            sdfimp = dfimp.sort('Importance', ascending=False)
+            dfimpCsv = 'Feature_Importance_%s.csv' % mname
+            sdfimp.to_csv(os.path.join(self.modelDir, dfimpCsv))
+            if self.validation is None:
+                logger.info('[%s] : [INFO] Validation is set to None',
+                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+                # return True
+            else:
+                vfile = os.path.join(self.dataDir, self.validation)
+                logger.info('[%s] : [INFO] Validation data file is set to %s',
+                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(vfile))
+                if not os.path.isfile(vfile):
+                    print "Validation file %s not found" % vfile
+                    logger.error('[%s] : [ERROR] Validation file %s not found',
+                                 datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(vfile))
+                else:
+                    df_valid = pd.read_csv(vfile)
+                    if dropna:
+                        df_valid = df_valid.dropna()
+                    features_valid = df_valid.columns[:-1]
+                    X_valid = df_valid[features_valid]
+                    y_valid = df_valid.iloc[:, -1].values
+                    pred_valid = ad.predict(X_valid)
+                    print "Ada Boost Validation set prediction: "
+                    print pred_valid
+                    print "Actual values of validation set: "
+                    print y_valid
+                    score_valid = ad.score(X_valid, y_valid)
+                    print "Ada Boost set score: %s" % str(score_valid)
+                    # return True
+        self.__serializemodel(ad, 'DecisionTree', mname)
+        return ad
+
+    def neuralNet(self, settings, data=None, dropna=True):
+        if "activation" not in settings:
+            print "Received settings for Neural Networks are %s invalid!" % str(settings)
+            logger.error('[%s] : [ERROR] Received settings for Neural Networks %s are invalid',
+                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(settings))
+            sys.exit(1)
+
+        rfallowedSettings = ["max_iter", "activation", "solver", "batch_size", "learning_rate",
+                             "momentum", "alpha"]
+
+        for k, v in settings.iteritems():
+            if k in rfallowedSettings:
+                logger.info('[%s] : [INFO] Neural Network %s set to %s',
+                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), k, v)
+                print "Neural Network %s set to %s" % (k, v)
+
+        if not isinstance(self.export, str):
+            mname = 'default'
+        else:
+            mname = self.export
+
+        df = self.__loadData(data, dropna)
+        features = df.columns[:-1]
+        X = df[features]
+        y = df.iloc[:, -1].values
+
+        mlp = MLPClassifier(hidden_layer_sizes=(50, 20), max_iter=settings['max_iter'],
+                            activation=settings['activation'],
+                            solver=settings['solver'], batch_size=settings['batch_size'],
+                            learning_rate=settings['learning_rate'], momentum=settings['momentum'],
+                            alpha=settings['alpha'])
+
+        if self.validratio:
+            trainSize = 1.0 - self.validratio
+            print "Neural Network training to validation ratio set to: %s" % str(self.validratio)
+            logger.info('[%s] : [INFO] Neural Netowork training to validation ratio set to: %s',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(self.validratio))
+            d_train, d_test, f_train, f_test = self.__dataSplit(X, y, testSize=self.validratio, trainSize=trainSize)
+            mlp.fit(d_train, f_train)
+            predict = mlp.predict(d_train)
+            print "Prediction for Neural Network Training:"
+            print predict
+
+            print "Actual labels of training set:"
+            print f_train
+
+            predProb = mlp.predict_proba(d_train)
+            print "Prediction probabilities for Neural Network Training:"
+            print predProb
+
+            score = mlp.score(d_train, f_train)
+            print "Neural Network Training Score: %s" % str(score)
+            logger.info('[%s] : [INFO] Neural Network training score: %s',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(score))
+            pred_valid = mlp.predict(d_test)
+            print "Neural Network Validation set prediction: "
+            print pred_valid
+            print "Actual values of validation set: "
+            print d_test
+            score_valid = mlp.score(d_test, f_test)
+            print "Neural Network validation set score: %s" % str(score_valid)
+            logger.info('[%s] : [INFO] Random forest validation score: %s',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(score_valid))
+        else:
+            mlp.fit(X, y)
+            predict = mlp.predict(X)
+            print "Prediction for Neural Network Training:"
+            print predict
+
+            print "Actual labels of training set:"
+            print y
+
+            predProb = mlp.predict_proba(X)
+            print "Prediction probabilities for Neural Network Training:"
+            print predProb
+
+            score = mlp.score(X, y)
+            print "Random Forest Training Score: %s" % str(score)
+
+            if self.validation is None:
+                logger.info('[%s] : [INFO] Validation is set to None',
+                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+                # return True
+            else:
+                vfile = os.path.join(self.dataDir, settings['validation'])
+                logger.info('[%s] : [INFO] Validation data file is set to %s',
+                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(vfile))
+                if not os.path.isfile(vfile):
+                    print "Validation file %s not found" % vfile
+                    logger.error('[%s] : [ERROR] Validation file %s not found',
+                                 datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(vfile))
+                else:
+                    df_valid = pd.read_csv(vfile)
+                    if dropna:
+                        df_valid = df_valid.dropna()
+                    features_valid = df_valid.columns[:-1]
+                    X_valid = df_valid[features_valid]
+                    y_valid = df_valid.iloc[:, -1].values
+                    pred_valid = mlp.predict(X_valid)
+                    print "Neural Network Validation set prediction: "
+                    print pred_valid
+                    print "Actual values of validation set: "
+                    print y_valid
+                    score_valid = mlp.score(X_valid, y_valid)
+                    print "Neural Network validation set score: %s" % str(score_valid)
+                    # return True
+        self.__serializemodel(mlp, 'RandomForest', mname)
+        return mlp
 
     def decisionTree(self, settings, data=None, dropna=True):
         if "splitter" not in settings:
