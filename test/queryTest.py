@@ -2870,3 +2870,833 @@ if test17 != cepQ:
     print "+" * 50
 else:
     print "Passed Test 17"
+
+sparkQ = {
+  "query": {
+    "filtered": {
+      "query": {
+        "query_string": {
+          "analyze_wildcard": True,
+          "query": "*"
+        }
+      },
+      "filter": {
+        "bool": {
+          "must": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": 1506290380885,
+                  "lte": 1506376780885,
+                  "format": "epoch_millis"
+                }
+              }
+            }
+          ],
+          "must_not": []
+        }
+      }
+    }
+  },
+  "size": 0,
+  "aggs": {
+    "2": {
+      "date_histogram": {
+        "field": "@timestamp",
+        "interval": "10m",
+        "time_zone": "Europe/Helsinki",
+        "min_doc_count": 1,
+        "extended_bounds": {
+          "min": 1506290380885,
+          "max": 1506376780885
+        }
+      },
+      "aggs": {
+        "1": {
+          "avg": {
+            "field": "jvm_total_committed"
+          }
+        },
+        "3": {
+          "avg": {
+            "field": "jvm_heap_init"
+          }
+        },
+        "4": {
+          "avg": {
+            "field": "jvm_total_used"
+          }
+        },
+        "5": {
+          "avg": {
+            "field": "jvm_pools_Tenured-Gen_committed"
+          }
+        },
+        "6": {
+          "avg": {
+            "field": "jvm_pools_Tenured-Gen_init"
+          }
+        },
+        "7": {
+          "avg": {
+            "field": "jvm_pools_Tenured-Gen_max"
+          }
+        },
+        "8": {
+          "avg": {
+            "field": "jvm_pools_Tenured-Gen_usage"
+          }
+        },
+        "9": {
+          "avg": {
+            "field": "jvm_pools_Tenured-Gen_used"
+          }
+        },
+        "10": {
+          "avg": {
+            "field": "jvm_pools_Survivor-Space_committed"
+          }
+        },
+        "11": {
+          "avg": {
+            "field": "jvm_pools_Survivor-Space_init"
+          }
+        },
+        "12": {
+          "avg": {
+            "field": "jvm_pools_Survivor-Space_max"
+          }
+        },
+        "13": {
+          "avg": {
+            "field": "jvm_pools_Survivor-Space_usage"
+          }
+        },
+        "14": {
+          "avg": {
+            "field": "jvm_pools_Survivor-Space_used"
+          }
+        },
+        "15": {
+          "avg": {
+            "field": "jvm_pools_Metaspace_committed"
+          }
+        },
+        "16": {
+          "avg": {
+            "field": "jvm_pools_Metaspace_init"
+          }
+        },
+        "17": {
+          "avg": {
+            "field": "jvm_pools_Metaspace_max"
+          }
+        },
+        "18": {
+          "avg": {
+            "field": "jvm_pools_Metaspace_usage"
+          }
+        },
+        "19": {
+          "avg": {
+            "field": "jvm_pools_Metaspace_used"
+          }
+        },
+        "20": {
+          "avg": {
+            "field": "jvm_pools_Eden-Space_committed"
+          }
+        },
+        "21": {
+          "avg": {
+            "field": "jvm_pools_Eden-Space_init"
+          }
+        },
+        "22": {
+          "avg": {
+            "field": "jvm_pools_Eden-Space_max"
+          }
+        },
+        "23": {
+          "avg": {
+            "field": "jvm_pools_Eden-Space_usage"
+          }
+        },
+        "24": {
+          "avg": {
+            "field": "jvm_pools_Eden-Space_used"
+          }
+        },
+        "25": {
+          "avg": {
+            "field": "jvm_pools_Compressed-Class-Space_committed"
+          }
+        },
+        "26": {
+          "avg": {
+            "field": "jvm_pools_Compressed-Class-Space_init"
+          }
+        },
+        "27": {
+          "avg": {
+            "field": "jvm_pools_Compressed-Class-Space_max"
+          }
+        },
+        "28": {
+          "avg": {
+            "field": "jvm_pools_Compressed-Class-Space_usage"
+          }
+        },
+        "29": {
+          "avg": {
+            "field": "jvm_pools_Compressed-Class-Space_used"
+          }
+        },
+        "30": {
+          "avg": {
+            "field": "jvm_pools_Code-Cache_committed"
+          }
+        },
+        "31": {
+          "avg": {
+            "field": "jvm_pools_Code-Cache_init"
+          }
+        },
+        "32": {
+          "avg": {
+            "field": "jvm_pools_Code-Cache_max"
+          }
+        },
+        "33": {
+          "avg": {
+            "field": "jvm_pools_Code-Cache_usage"
+          }
+        },
+        "34": {
+          "avg": {
+            "field": "jvm_pools_Code-Cache_used"
+          }
+        },
+        "35": {
+          "avg": {
+            "field": "jvm_non-heap_committed"
+          }
+        },
+        "36": {
+          "avg": {
+            "field": "jvm_non-heap_init"
+          }
+        },
+        "37": {
+          "avg": {
+            "field": "jvm_non-heap_max"
+          }
+        },
+        "38": {
+          "avg": {
+            "field": "jvm_non-heap_usage"
+          }
+        },
+        "39": {
+          "avg": {
+            "field": "jvm_non-heap_used"
+          }
+        },
+        "40": {
+          "avg": {
+            "field": "jvm_MarkSweepCompact_time"
+          }
+        },
+        "41": {
+          "avg": {
+            "field": "jvm_MarkSweepCompact_count"
+          }
+        },
+        "42": {
+          "avg": {
+            "field": "jvm_heap_committed"
+          }
+        },
+        "43": {
+          "avg": {
+            "field": "jvm_heap_init"
+          }
+        },
+        "44": {
+          "avg": {
+            "field": "jvm_heap_max"
+          }
+        },
+        "45": {
+          "avg": {
+            "field": "jvm_heap_usage"
+          }
+        },
+        "46": {
+          "avg": {
+            "field": "jvm_heap_used"
+          }
+        },
+        "47": {
+          "avg": {
+            "field": "jvm_MarkSweepCompact_time"
+          }
+        },
+        "48": {
+          "avg": {
+            "field": "jvm_MarkSweepCompact_count"
+          }
+        },
+        "49": {
+          "avg": {
+            "field": "jvm_Copy_time"
+          }
+        },
+        "50": {
+          "avg": {
+            "field": "jvm_Copy_count"
+          }
+        },
+        "51": {
+          "avg": {
+            "field": "driver_jvm_total_used"
+          }
+        },
+        "52": {
+          "avg": {
+            "field": "driver_jvm_total_max"
+          }
+        },
+        "53": {
+          "avg": {
+            "field": "driver_jvm_total_init"
+          }
+        },
+        "54": {
+          "avg": {
+            "field": "driver_jvm_total_committed"
+          }
+        },
+        "55": {
+          "avg": {
+            "field": "driver_jvm_pools_Tenured-Gen_used"
+          }
+        },
+        "56": {
+          "avg": {
+            "field": "driver_jvm_pools_Tenured-Gen_usage"
+          }
+        },
+        "57": {
+          "avg": {
+            "field": "driver_jvm_pools_Tenured-Gen_max"
+          }
+        },
+        "58": {
+          "avg": {
+            "field": "driver_jvm_pools_Tenured-Gen_init"
+          }
+        },
+        "59": {
+          "avg": {
+            "field": "driver_jvm_pools_Tenured-Gen_committed"
+          }
+        },
+        "60": {
+          "avg": {
+            "field": "driver_jvm_pools_Survivor-Space_used"
+          }
+        },
+        "61": {
+          "avg": {
+            "field": "driver_jvm_pools_Survivor-Space_usage"
+          }
+        },
+        "62": {
+          "avg": {
+            "field": "driver_jvm_pools_Survivor-Space_max"
+          }
+        },
+        "63": {
+          "avg": {
+            "field": "driver_jvm_pools_Survivor-Space_init"
+          }
+        },
+        "64": {
+          "avg": {
+            "field": "driver_jvm_pools_Survivor-Space_committed"
+          }
+        },
+        "65": {
+          "avg": {
+            "field": "driver_jvm_pools_Metaspace_used"
+          }
+        },
+        "66": {
+          "avg": {
+            "field": "driver_jvm_pools_Metaspace_usage"
+          }
+        },
+        "67": {
+          "avg": {
+            "field": "driver_jvm_pools_Metaspace_max"
+          }
+        },
+        "68": {
+          "avg": {
+            "field": "driver_jvm_pools_Metaspace_init"
+          }
+        },
+        "69": {
+          "avg": {
+            "field": "driver_jvm_pools_Metaspace_committed"
+          }
+        },
+        "70": {
+          "avg": {
+            "field": "driver_jvm_pools_Eden-Space_used"
+          }
+        },
+        "71": {
+          "avg": {
+            "field": "driver_jvm_pools_Eden-Space_usage"
+          }
+        },
+        "72": {
+          "avg": {
+            "field": "driver_jvm_pools_Eden-Space_max"
+          }
+        },
+        "73": {
+          "avg": {
+            "field": "driver_jvm_pools_Eden-Space_init"
+          }
+        },
+        "74": {
+          "avg": {
+            "field": "driver_jvm_pools_Eden-Space_committed"
+          }
+        },
+        "75": {
+          "avg": {
+            "field": "driver_jvm_pools_Compressed-Class-Space_used"
+          }
+        },
+        "76": {
+          "avg": {
+            "field": "driver_jvm_pools_Compressed-Class-Space_usage"
+          }
+        },
+        "77": {
+          "avg": {
+            "field": "driver_jvm_pools_Survivor-Space_max"
+          }
+        },
+        "78": {
+          "avg": {
+            "field": "driver_jvm_pools_Compressed-Class-Space_init"
+          }
+        },
+        "79": {
+          "avg": {
+            "field": "driver_jvm_pools_Compressed-Class-Space_committed"
+          }
+        },
+        "80": {
+          "avg": {
+            "field": "driver_jvm_pools_Code-Cache_used"
+          }
+        },
+        "81": {
+          "avg": {
+            "field": "driver_jvm_pools_Code-Cache_usage"
+          }
+        },
+        "82": {
+          "avg": {
+            "field": "driver_jvm_pools_Code-Cache_max"
+          }
+        },
+        "83": {
+          "avg": {
+            "field": "driver_jvm_pools_Code-Cache_init"
+          }
+        },
+        "84": {
+          "avg": {
+            "field": "driver_jvm_pools_Code-Cache_committed"
+          }
+        },
+        "85": {
+          "avg": {
+            "field": "driver_jvm_non-heap_used"
+          }
+        },
+        "86": {
+          "avg": {
+            "field": "driver_jvm_non-heap_usage"
+          }
+        },
+        "87": {
+          "avg": {
+            "field": "driver_jvm_non-heap_max"
+          }
+        },
+        "88": {
+          "avg": {
+            "field": "driver_jvm_non-heap_init"
+          }
+        },
+        "89": {
+          "avg": {
+            "field": "driver_jvm_non-heap_committed"
+          }
+        },
+        "90": {
+          "avg": {
+            "field": "driver_jvm_MarkSweepCompact_time"
+          }
+        },
+        "91": {
+          "avg": {
+            "field": "driver_jvm_MarkSweepCompact_count"
+          }
+        },
+        "92": {
+          "avg": {
+            "field": "driver_jvm_heap_used"
+          }
+        },
+        "93": {
+          "avg": {
+            "field": "driver_jvm_heap_usage"
+          }
+        },
+        "94": {
+          "avg": {
+            "field": "driver_jvm_heap_max"
+          }
+        },
+        "95": {
+          "avg": {
+            "field": "driver_jvm_non-heap_init"
+          }
+        },
+        "96": {
+          "avg": {
+            "field": "driver_jvm_heap_committed"
+          }
+        },
+        "97": {
+          "avg": {
+            "field": "driver_jvm_Copy_time"
+          }
+        },
+        "98": {
+          "avg": {
+            "field": "driver_jvm_Copy_count"
+          }
+        },
+        "99": {
+          "avg": {
+            "field": "driver_ExecutorAllocationManager_executors_numberTargetExecutors"
+          }
+        },
+        "100": {
+          "avg": {
+            "field": "driver_ExecutorAllocationManager_executors_numberMaxNeededExecutors"
+          }
+        },
+        "101": {
+          "avg": {
+            "field": "driver_ExecutorAllocationManager_executors_numberExecutorsToAdd"
+          }
+        },
+        "102": {
+          "avg": {
+            "field": "driver_ExecutorAllocationManager_executors_numberExecutorsPendingToRemove"
+          }
+        },
+        "103": {
+          "avg": {
+            "field": "driver_ExecutorAllocationManager_executors_numberAllExecutors"
+          }
+        },
+        "104": {
+          "avg": {
+            "field": "driver_DAGScheduler_stage_waitingStages"
+          }
+        },
+        "105": {
+          "avg": {
+            "field": "driver_DAGScheduler_stage_runningStages"
+          }
+        },
+        "106": {
+          "avg": {
+            "field": "driver_DAGScheduler_stage_failedStages"
+          }
+        },
+        "107": {
+          "avg": {
+            "field": "driver_DAGScheduler_messageProcessingTime_count"
+          }
+        },
+        "108": {
+          "avg": {
+            "field": "driver_DAGScheduler_messageProcessingTime_m1_rate"
+          }
+        },
+        "109": {
+          "avg": {
+            "field": "driver_DAGScheduler_messageProcessingTime_m5_rate"
+          }
+        },
+        "110": {
+          "avg": {
+            "field": "driver_DAGScheduler_messageProcessingTime_m15_rate"
+          }
+        },
+        "111": {
+          "avg": {
+            "field": "driver_DAGScheduler_messageProcessingTime_max"
+          }
+        },
+        "112": {
+          "avg": {
+            "field": "driver_DAGScheduler_messageProcessingTime_mean"
+          }
+        },
+        "113": {
+          "avg": {
+            "field": "driver_DAGScheduler_messageProcessingTime_mean_rate"
+          }
+        },
+        "114": {
+          "avg": {
+            "field": "driver_DAGScheduler_messageProcessingTime_min"
+          }
+        },
+        "115": {
+          "avg": {
+            "field": "driver_DAGScheduler_job_allJobs"
+          }
+        },
+        "116": {
+          "avg": {
+            "field": "driver_DAGScheduler_job_activeJobs"
+          }
+        },
+        "117": {
+          "avg": {
+            "field": "driver_BlockManager_memory_remainingOnHeapMem_MB"
+          }
+        },
+        "118": {
+          "avg": {
+            "field": "driver_BlockManager_memory_remainingOffHeapMem_MB"
+          }
+        },
+        "119": {
+          "avg": {
+            "field": "driver_BlockManager_memory_remainingMem_MB"
+          }
+        },
+        "120": {
+          "avg": {
+            "field": "driver_BlockManager_memory_onHeapMemUsed_MB"
+          }
+        },
+        "121": {
+          "avg": {
+            "field": "driver_BlockManager_memory_offHeapMemUsed_MB"
+          }
+        },
+        "122": {
+          "avg": {
+            "field": "driver_BlockManager_memory_memUsed_MB"
+          }
+        },
+        "123": {
+          "avg": {
+            "field": "driver_BlockManager_memory_maxOnHeapMem_MB"
+          }
+        },
+        "124": {
+          "avg": {
+            "field": "driver_BlockManager_memory_maxOffHeapMem_MB"
+          }
+        },
+        "125": {
+          "avg": {
+            "field": "driver_BlockManager_memory_maxMem_MB"
+          }
+        },
+        "126": {
+          "avg": {
+            "field": "driver_BlockManager_disk_diskSpaceUsed_MB"
+          }
+        },
+        "127": {
+          "avg": {
+            "field": "2_executor_threadpool_maxPool_size"
+          }
+        },
+        "128": {
+          "avg": {
+            "field": "2_executor_threadpool_currentPool_size"
+          }
+        },
+        "129": {
+          "avg": {
+            "field": "2_executor_filesystem_hdfs_write_ops"
+          }
+        },
+        "130": {
+          "avg": {
+            "field": "2_executor_filesystem_hdfs_write_bytes"
+          }
+        },
+        "131": {
+          "avg": {
+            "field": "2_executor_filesystem_hdfs_read_ops"
+          }
+        },
+        "132": {
+          "avg": {
+            "field": "2_executor_filesystem_hdfs_read_bytes"
+          }
+        },
+        "133": {
+          "avg": {
+            "field": "2_executor_filesystem_hdfs_largeRead_ops"
+          }
+        },
+        "134": {
+          "avg": {
+            "field": "2_executor_filesystem_file_write_ops"
+          }
+        },
+        "135": {
+          "avg": {
+            "field": "2_executor_filesystem_file_write_bytes"
+          }
+        },
+        "136": {
+          "avg": {
+            "field": "2_executor_filesystem_file_read_ops"
+          }
+        },
+        "137": {
+          "avg": {
+            "field": "2_executor_filesystem_file_read_bytes"
+          }
+        },
+        "138": {
+          "avg": {
+            "field": "2_executor_filesystem_file_largeRead_ops"
+          }
+        },
+        "139": {
+          "avg": {
+            "field": "1_executor_threadpool_maxPool_size"
+          }
+        },
+        "140": {
+          "avg": {
+            "field": "1_executor_threadpool_currentPool_size"
+          }
+        },
+        "141": {
+          "avg": {
+            "field": "1_executor_filesystem_hdfs_write_ops"
+          }
+        },
+        "142": {
+          "avg": {
+            "field": "1_executor_filesystem_hdfs_write_bytes"
+          }
+        },
+        "143": {
+          "avg": {
+            "field": "1_executor_filesystem_hdfs_read_ops"
+          }
+        },
+        "144": {
+          "avg": {
+            "field": "1_executor_filesystem_hdfs_read_bytes"
+          }
+        },
+        "145": {
+          "avg": {
+            "field": "1_executor_filesystem_hdfs_largeRead_ops"
+          }
+        },
+        "146": {
+          "avg": {
+            "field": "1_executor_filesystem_file_write_ops"
+          }
+        },
+        "147": {
+          "avg": {
+            "field": "1_executor_filesystem_file_write_bytes"
+          }
+        },
+        "148": {
+          "avg": {
+            "field": "1_executor_filesystem_file_read_ops"
+          }
+        },
+        "149": {
+          "avg": {
+            "field": "1_executor_filesystem_file_read_bytes"
+          }
+        },
+        "150": {
+          "avg": {
+            "field": "1_executor_filesystem_file_largeRead_ops"
+          }
+        }
+      }
+    }
+  }
+}
+
+qstring18 = "*"
+qgte = 1506290380885
+qlte = 1506376780885
+qsize = 0
+qinterval ="10m"
+test18 = qConstructor.sparkQuery(qstring=qstring18, qgte=qgte, qlte=qlte, qsize=qsize, qinterval=qinterval, qmin_doc_count=1)
+
+print "Gen->%s" % test18
+print "Org->%s" % sparkQ
+if test18 != sparkQ:
+    print "Failed Test 18"
+    print "+" * 50
+    print "Gen-q->%s" % test18['query']
+    print "Org-q->%s" % sparkQ['query']
+    print "-" * 50
+    print "Gen-a->%s" % test18['aggs']
+    print "Org-a->%s" % sparkQ['aggs']
+    print "-" * 50
+    # print "Gen-ad->%s" % sorted(test17['aggs']['2']['aggs'].keys())
+    # print "Org-ad->%s" % sorted(cepQ['aggs']['2']['aggs'].keys())
+    # print "-" * 50
+    # for k, v in test17['aggs']['2']['aggs'].iteritems():
+    #     if v != cepQ['aggs']['2']['aggs'][k]:
+    #         print "%" * 50
+    #         print "Mismatch Key value in original and generated"
+    #         print "Generate has %s -> %s" % (k, v)
+    #         print "Original has %s -> %s" % (k, fsop['aggs']['2']['aggs'][k])
+    #         print "%" * 50
+    #     else:
+    #         print "Match"
+
+    print "-" * 50
+    print "Gen-s>%s" % test18['size']
+    print "Org-s>%s" % sparkQ['size']
+    print "Fail"
+    print "+" * 50
+else:
+    print "Passed Test 18"

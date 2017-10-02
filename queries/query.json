@@ -1,10 +1,22 @@
 {
-  "size": 0,
+  "highlight": {
+    "pre_tags": [
+      "@kibana-highlighted-field@"
+    ],
+    "post_tags": [
+      "@/kibana-highlighted-field@"
+    ],
+    "fields": {
+      "*": {}
+    },
+    "require_field_match": false,
+    "fragment_size": 2147483647
+  },
   "query": {
     "filtered": {
       "query": {
         "query_string": {
-          "query": "collectd_type:\"load\" AND host:\"vm-cluster-storm4\"",
+          "query": "type:cep-posidonia AND DComp:DMON",
           "analyze_wildcard": true
         }
       },
@@ -14,8 +26,8 @@
             {
               "range": {
                 "@timestamp": {
-                  "gte": 1496940356413,
-                  "lte": 1496954756413,
+                  "gte": 1498057785356,
+                  "lte": 1498144185356,
                   "format": "epoch_millis"
                 }
               }
@@ -26,35 +38,35 @@
       }
     }
   },
+  "size": 500,
+  "sort": [
+    {
+      "@timestamp": {
+        "order": "desc",
+        "unmapped_type": "boolean"
+      }
+    }
+  ],
   "aggs": {
     "2": {
       "date_histogram": {
         "field": "@timestamp",
-        "interval": "1s",
+        "interval": "30s",
         "time_zone": "Europe/Helsinki",
-        "min_doc_count": 1,
+        "min_doc_count": 0,
         "extended_bounds": {
-          "min": 1496940356413,
-          "max": 1496954756413
-        }
-      },
-      "aggs": {
-        "1": {
-          "avg": {
-            "field": "shortterm"
-          }
-        },
-        "3": {
-          "avg": {
-            "field": "midterm"
-          }
-        },
-        "4": {
-          "avg": {
-            "field": "longterm"
-          }
+          "min": 1498057785356,
+          "max": 1498144185356
         }
       }
     }
-  }
+  },
+  "fields": [
+    "*",
+    "_source"
+  ],
+  "script_fields": {},
+  "fielddata_fields": [
+    "@timestamp"
+  ]
 }
