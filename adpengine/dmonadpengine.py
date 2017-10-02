@@ -208,6 +208,7 @@ class AdpEngine:
                 print "System Metrics merge complete"
             else:
                 print "Only for all system metrics available" #todo for metrics types
+                sys.exit()
         if 'yarn' in queryd:
             print "Starting query for yarn metrics"
             if queryd['yarn'] == 0: # todo test if it works
@@ -455,10 +456,10 @@ class AdpEngine:
             print "Finished query and merge for yarn metrics"
 
         elif 'spark' in queryd:
-            print "Spark metrics" #todo
-            self.sparkReturn = 0
+            print "Starting query for Spark metrics" #todo
+            self.sparkReturn = self.getSpark(detect=detect)
         elif 'storm' in queryd:
-            print "Starting query for storm metrics"
+            print "Starting query for Storm metrics"
             stormTopology = self.dmonConnector.getStormTopology()
             try:
                 bolts = stormTopology['bolts']
@@ -567,7 +568,7 @@ class AdpEngine:
                 elif 'mongodb' in queryd:
                     udata = self.dformat.toDF(os.path.join(self.dataDir, 'Merged_Mongo.csv'))
                 elif 'spark' in queryd:
-                    return "not yet implemented"  # todo
+                    udata = self.dformat.toDF(os.path.join(self.dataDir, 'Spark.csv'))
                 elif 'userquery' in queryd:
                     udata = self.dformat.toDF(os.path.join(self.dataDir, 'query_response.csv'))
                 elif 'cep' in queryd:
@@ -584,7 +585,7 @@ class AdpEngine:
                 elif 'mongodb' in queryd:
                     udata = mongoReturn
                 elif 'spark' in queryd:
-                    return "not yet implemented"  # todo
+                    udata = sparkReturn
                 elif 'userquery' in queryd:
                     udata = userqueryReturn
                 elif 'cep' in queryd:
@@ -870,6 +871,14 @@ class AdpEngine:
                             dataf = os.path.join(self.dataDir, 'CEP.csv')
                             data = self.dformat.toDF(dataf)
                         data = self.filterData(data)
+                    elif 'spark' in queryd:
+                        sparkReturn = self.filterData(sparkReturn)
+                        if checkpoint:
+                            data = sparkReturn
+                        else:
+                            dataf = os.path.join(self.dataDir, 'Spark.csv')
+                            data = self.dformat.toDF(dataf)
+                        data = self.filterData(data)
                     if self.method in self.allowedMethodsClustering:
                         print "Detecting with selected method %s of type %s" % (self.method, self.type)
                         if os.path.isfile(os.path.join(self.modelsDir, self.modelName(self.method, self.load))):
@@ -942,6 +951,14 @@ class AdpEngine:
                             data = cepQueryReturn
                         else:
                             dataf = os.path.join(self.dataDir, 'CEP.csv')
+                            data = self.dformat.toDF(dataf)
+                        data.set_index('key', inplace=True)
+                        data = self.filterData(data)
+                    elif 'spark' in queryd:
+                        if checkpoint:
+                            data = sparkReturn
+                        else:
+                            dataf = os.path.joint(self.dataDir, 'Spark.csv')
                             data = self.dformat.toDF(dataf)
                         data.set_index('key', inplace=True)
                         data = self.filterData(data)
@@ -1638,6 +1655,34 @@ class AdpEngine:
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
 
         return returnCEP
+
+    def getSpark(self, detect=False):
+        if detect:
+            tfrom = "now-%s" % self.interval
+            to = "now"
+        else:
+            tfrom = self.tfrom
+            to = self.to
+        print "Querying Spark metrics ..."
+        logger.info('[%s] : [INFO] Querying  Spark metrics ...',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        checkpoint = str2Bool(self.checkpoint)
+
+        sparkString, spark_file = self.qConstructor.sparkString()
+        qSpark = self.qConstructor.sparkQuery(sparkString, tfrom, to, self.qsize, self.interval)
+        gSpark = self.dmonConnector.aggQuery(qSpark)
+
+        if not checkpoint:
+            self.dformat.dict2csv(gSpark, qSpark, spark_file)
+            returnSP = 0
+        else:
+            df_SP = self.dformat.dict2csv(gSpark, qSpark, spark_file, df=checkpoint)
+            # df_NN.set_index('key', inplace=True)
+            returnNN = df_SP
+        print "Querying  Spark metrics complete"
+        logger.info('[%s] : [INFO] Querying  Name Node metrics complete',
+                    datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        return returnNN
 
     def printTest(self):
         print "Endpoint -> %s" %self.esendpoint
