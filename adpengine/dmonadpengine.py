@@ -544,11 +544,14 @@ class AdpEngine:
         # Check for user defined categorical features
         if df.index.name is None:
             df.set_index('key', inplace=True)
-        if self.categorical == 0:
+
+        if self.categorical is None:
+            print self.categorical
             logger.info('[%s] : [INFO] Skipping categorical feature conversion',
                                datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
             print "Skipping categorical feature conversion"
         else:
+            self.categorical
             col = self.getCategoricalFeatures()
             df, v, o = self.dformat.ohEncoding(df, cols=col)
         return df
@@ -605,24 +608,24 @@ class AdpEngine:
                             data = dataf.name
                     else:
                         if 'yarn' in queryd:
-                            dataf = os.path.join(self.dataDir, 'Final_Merge.csv')
-                            if not os.path.isfile(dataf):
-                                print "File %s does not exist, cannot load data! Exiting ..." % str(dataf)
+                            data = os.path.join(self.dataDir, 'Final_Merge.csv')
+                            if not os.path.isfile(data):
+                                print "File %s does not exist, cannot load data! Exiting ..." % str(data)
                                 logger.error('[%s] : [ERROR] File %s does not exist',
                                              datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'),
-                                             str(dataf))
+                                             str(data))
                                 sys.exit(1)
                         elif 'storm' in queryd:
-                            dataf = os.path.join(self.dataDir, 'Storm.csv')
+                            data = os.path.join(self.dataDir, 'Storm.csv')
                         elif 'cassandra' in queryd:
-                            dataf = os.path.join(self.dataDir, 'Merged_Cassandra.csv')
+                            data = os.path.join(self.dataDir, 'Merged_Cassandra.csv')
                         elif 'mongodb' in queryd:
-                            dataf = os.path.join(self.dataDir, 'Merged_Mongo.csv')
+                            data = os.path.join(self.dataDir, 'Merged_Mongo.csv')
                         elif 'userquery' in queryd:
-                            dataf = os.path.join(self.dataDir, 'query_response.csv')
+                            data = os.path.join(self.dataDir, 'query_response.csv')
                         elif 'cep' in queryd:
-                            dataf = os.path.join(self.dataDir, 'cep.csv')
-                        data = dataf
+                            data = os.path.join(self.dataDir, 'cep.csv')
+                        # data = dataf
                     if self.method == 'skm':
                         print "Method %s settings detected -> %s" % (self.method, str(self.methodSettings))
                         opt = parseMethodSettings(self.methodSettings)

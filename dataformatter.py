@@ -460,8 +460,13 @@ class DataFormatter:
                             logger.debug('[%s] : [DEBUG] Detected Memory type aggregation', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
                             # print "This is  rValue ________________> %s" % str(rValue)
                             # print "Keys of rValue ________________> %s" % str(rValue.keys())
-                            for val in rValue['buckets']:
-                                dictMetrics[val['key']] = val['1']['value']
+                            try:
+                                for val in rValue['buckets']:
+                                        dictMetrics[val['key']] = val['1']['value']
+                            except Exception as inst:
+                                logger.error('[%s] : [ERROR] Failed to find key with %s and %s',
+                                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), rKey, rValue['value'])
+                                sys.exit(1)
                         else:
                             # print "Values -> %s" % rValue
                             # print "rKey -> %s" % rKey
