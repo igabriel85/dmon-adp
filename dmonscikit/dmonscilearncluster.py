@@ -149,9 +149,11 @@ class SciCluster:
             if type(dpredict) is not int:
                 anomalyarray = np.argwhere(dpredict == -1)
                 for an in anomalyarray:
+                    # print type(data.iloc[an[0]])
+                    # print data.iloc[an[0]].name
                     anomalies = {}
-                    anomalies['utc'] = int(data.iloc[an[0]]['key'])
-                    anomalies['hutc'] = ut2hum(int(data.iloc[an[0]]['key']))
+                    anomalies['utc'] = int(data.iloc[an[0]].name)
+                    anomalies['hutc'] = ut2hum(int(data.iloc[an[0]].name))
                     anomalieslist.append(anomalies)
         anomaliesDict = {}
         anomaliesDict['anomalies'] = anomalieslist
