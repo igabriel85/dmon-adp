@@ -308,6 +308,7 @@ class DataFormatter:
         else:
             logger.error('[%s] : [INFO] Cannot merge type %s',
                                          datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(type(dfList[0])))
+            for el in lFiles:
         # for d in dfList:
         #     if d.empty:
         #         logger.warning('[%s] : [INFO] Detected empty dataframe in final merge, removing ...',
