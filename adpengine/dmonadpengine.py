@@ -381,9 +381,10 @@ class AdpEngine:
                     merged_cluster = self.dformat.chainMergeCluster()
                     self.dformat.df2csv(merged_cluster, os.path.join(self.dataDir, 'Cluster_Merged.csv'))
 
-                    nm_merged, jvmnn_merged = self.dformat.chainMergeNM()
+                    nm_merged, jvmnn_merged, nm_Shuffle = self.dformat.chainMergeNM()
                     self.dformat.df2csv(nm_merged, os.path.join(self.dataDir, 'NM_Merged.csv'))
                     self.dformat.df2csv(jvmnn_merged, os.path.join(self.dataDir, 'JVM_NM_Merged.csv'))
+                    self.dformat.df2csv(nm_Shuffle, os.path.join(self.dataDir, 'NM_Shuffle.csv'))
 
                     dn_merged = self.dformat.chainMergeDN()
                     self.dformat.df2csv(dn_merged, os.path.join(self.dataDir, 'DN_Merged.csv'))
@@ -911,6 +912,14 @@ class AdpEngine:
                             data = sparkReturn
                         else:
                             dataf = os.path.join(self.dataDir, 'Spark.csv')
+                            data = self.dformat.toDF(dataf)
+                        data = self.filterData(data)
+                    elif 'system' in queryd:
+                        systemReturn = self.filterData(systemReturn)
+                        if checkpoint:
+                            data = systemReturn
+                        else:
+                            dataf = os.path.join(self.dataDir, 'System.csv')
                             data = self.dformat.toDF(dataf)
                         data = self.filterData(data)
                     if self.method in self.allowedMethodsClustering:
