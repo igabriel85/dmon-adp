@@ -61,6 +61,7 @@ class AdpEngine:
         self.checkpoint = settingsDict['checkpoint']
         self.interval = settingsDict['interval']
         self.delay = settingsDict['delay']
+        self.point = settingsDict['point']
         self.desiredNodesList = []
         self.sparkReturn = 0
         self.stormReturn = 0
@@ -551,7 +552,6 @@ class AdpEngine:
                                datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
             print "Skipping categorical feature conversion"
         else:
-            self.categorical
             col = self.getCategoricalFeatures()
             df, v, o = self.dformat.ohEncoding(df, cols=col)
         return df
@@ -1061,19 +1061,23 @@ class AdpEngine:
     def runProcess(self, engine):
         proc = []
         try:
-            pPoint = AdpPointProcess(engine, 'Point Proc')
+            if str2Bool(self.point):
+                pPoint = AdpPointProcess(engine, 'Point Proc')
+
             pTrain = AdpTrainProcess(engine, 'Train Proc')
             pDetect = AdpDetectProcess(engine, 'Detect Proc')
 
-            processPoint = pPoint.run()
-            proc.append(processPoint)
+            if str2Bool(self.point):
+                processPoint = pPoint.run()
+                proc.append(processPoint)
+
             processTrain = pTrain.run()
             proc.append(processTrain)
             processDetect = pDetect.run()
             proc.append(processDetect)
 
-
-            processPoint.start()
+            if str2Bool(self.point):
+                processPoint.start()
             processTrain.start()
             processDetect.start()
 

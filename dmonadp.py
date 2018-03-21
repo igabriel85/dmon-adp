@@ -71,7 +71,8 @@ def main(argv):
         "validratio":0.0,
         "compare": False,
         "anomalyOnly": False,
-        "categorical": None
+        "categorical": None,
+        "point": False
     }
 
     # Only for testing
@@ -584,6 +585,17 @@ def main(argv):
         print "Categorical Features -> %s" % settings["categorical"]
         logger.info('[%s] : [INFO] Categorical Features ->  %s',
                     datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings["categorical"])
+    if not settings["point"]:
+        try:
+            print "Heap size set to -> %s" % readCnf['Misc']['point']
+            settings['point'] = readCnf['Misc']['point']
+            logger.info('[%s] : [INFO] Point  set to %s',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['point'])
+        except:
+            print "Point detection not defined using default"
+            settings['point'] = 'False'
+            logger.info('[%s] : [INFO] Point detection set to default %s',
+                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), settings['point'])
 
     #if settings["esendpoint"] == None:
 
