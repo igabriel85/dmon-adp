@@ -306,9 +306,12 @@ class DataFormatter:
         elif all(isinstance(x, pd.DataFrame) for x in lFiles):
             dfList = lFiles
         else:
-            logger.error('[%s] : [INFO] Cannot merge type %s',
-                                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(type(dfList[0])))
+            incomp = []
             for el in lFiles:
+                if not isinstance(el, pd.DataFrame):
+                    incomp.append(type(el))
+            logger.error('[%s] : [ERROR] Incompatible type detected for merging, cannot merge type %s',
+                                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(incomp))
         # for d in dfList:
         #     if d.empty:
         #         logger.warning('[%s] : [INFO] Detected empty dataframe in final merge, removing ...',
@@ -340,14 +343,17 @@ class DataFormatter:
                         datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), mergedFile)
             print "Received empty dataframe for %s " % mergedFile
             sys.exit(1)
-        try:
-            kDF = dataFrame.set_index('key')
-        except Exception as inst:
-            logger.error('[%s] : [ERROR] Cannot write dataframe exception %s with arguments %s',
-                        datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
-            print "Cannot write dataframe exception %s with %s'" % (type(inst), inst.args)
-            sys.exit(1)
-
+        if dataFrame.index.name == 'key':
+            kDF = dataFrame
+        else:
+            try:
+                kDF = dataFrame.set_index('key')
+            except Exception as inst:
+                logger.error('[%s] : [ERROR] Cannot write dataframe exception %s with arguments %s',
+                            datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), type(inst), inst.args)
+                print "Cannot write dataframe exception %s with %s'" % (type(inst), inst.args)
+                print dataFrame.index.name
+                sys.exit(1)
         kDF.to_csv(mergedFile)
 
     def chainMergeSystem(self, linterface=None, lload=None, lmemory=None, lpack=None):
@@ -412,11 +418,11 @@ class DataFormatter:
     def mergeFinal(self, dfs=None, cluster=None, nodeMng=None, jvmnodeMng=None, dataNode=None, jvmNameNode=None, shuffle=None, system=None):
 
         if dfs is None and cluster is None and nodeMng is None and jvmnodeMng is None and dataNode is None and jvmNameNode is None and system is None and shuffle is None:
-            dfs = os.path.join(self.dataDir, "Merged_DFS.csv")
-            cluster = os.path.join(self.dataDir, "Merged_Cluster.csv")
-            nodeMng = os.path.join(self.dataDir, "Merged_NM.csv")
-            jvmnodeMng = os.path.join(self.dataDir, "Merged_JVM_NM.csv")
-            dataNode = os.path.join(self.dataDir, "Merged_DN.csv")
+            dfs = os.path.join(self.dataDir, "DFS_Merged.csv")
+            cluster = os.path.join(self.dataDir, "Cluster_Merged.csv")
+            nodeMng = os.path.join(self.dataDir, "NM_Merged.csv")
+            jvmnodeMng = os.path.join(self.dataDir, "JVM_NM_Merged.csv")
+            dataNode = os.path.join(self.dataDir, "NM_Shuffle.csv")
             system = os.path.join(self.dataDir, "System.csv")
             jvmNameNode = os.path.join(self.dataDir, "JVM_NN.csv")
             shuffle = os.path.join(self.dataDir, "Merged_Shuffle.csv")
