@@ -1,0 +1,18 @@
+[Unit]
+Description=Jupyter ADP Notebook
+
+[Service]
+Type=simple
+PIDFile=/run/jupyter_adp.pid
+# Step 1 and Step 2 details are here..
+# ------------------------------------
+ExecStart=/home/gabriel/Research/dmon-adp/adp_venv/bin/jupyter-notebook --config=/home/gabriel/.jupyter/jupyter_notebook_config.py
+User=gabriel
+Group=gabriel
+WorkingDirectory=/home/gabriel/Research/dmon-adp/notebooks
+Restart=always
+RestartSec=10
+#KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target
