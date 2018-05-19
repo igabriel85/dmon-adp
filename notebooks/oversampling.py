@@ -17,7 +17,7 @@ print "Percentage of fraudulent transactions : {}%".format(float(counts[1])/floa
 y = df.Class.values
 X = df.drop(['Class'], axis=1)
 print "Running SMOTE ..."
-sm = SMOTE(kind='svm')
+sm = SMOTE(kind='regular')
 X_sm, y_sm = sm.fit_sample(X, y)
 print "Shape of upsampled data is {}".format(X_sm.shape)
 _, ncounts = np.unique(y_sm, return_counts=True)
